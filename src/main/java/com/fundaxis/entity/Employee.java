@@ -54,15 +54,26 @@ public class Employee {
     @Column(length = 20)
     private String phoneNumber;
 
-
+    ///-----------------------------------------------------------
     @NotBlank(message = "Designation name is required")
     @Column(nullable = false, length = 100)
     private String designation;
 
+    public enum Designation {
+        FEO,
+        AVP,
+        EO,
+        JO,
+        SAVP,
+        SPO,
+        PO
+    }
+    ///-----------------------------------------------------------
 
-    ///---------- enum ---------------------------------
 
-    // Nested Enum
+
+
+    ///-----------------------------------------------------------
     public enum EmployeeStatus{
         ACTIVE,
         INACTIVE,
@@ -73,6 +84,7 @@ public class Employee {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private EmployeeStatus employeeStatus = EmployeeStatus.ACTIVE;
+    ///-----------------------------------------------------------
 
 
     // ---------- Fund Membership Information ----------
