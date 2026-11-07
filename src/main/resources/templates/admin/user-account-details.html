@@ -16,6 +16,7 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
@@ -40,7 +41,7 @@
     <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
         <div class="fa-sidebar-brand">
             <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">
-                <img th:src="@{/images/fundaxis-logo.png}" alt="FundAxis" class="fa-brand-logo">
+                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
                 <span class="fa-brand-text">FundAxis</span>
             </a>
             <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">
@@ -62,7 +63,8 @@
             <p class="fa-nav-heading">Administration</p>
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>
-                <li><a th:href="@{/admin/contributions}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
                 <li><a th:href="@{/admin/loans}" class="fa-nav-link"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>
                 <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>
                 <li><a th:href="@{/admin/disbursements}" class="fa-nav-link"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Loan Disbursements</span></a></li>

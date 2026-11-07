@@ -1,0 +1,1394 @@
+﻿
+/*
+ * FundAxis â€” Contribution & Share Management
+ * Common CSS for:
+ * Overview | Shares | Contributions | Payments
+ * Statements | Excel Exports
+ *
+ * Works alongside dashboard.css and Bootstrap 5.
+ * Component selectors are scoped with cs- prefix.
+ */
+
+:root {
+    --cs-primary: #024731;
+    --cs-primary-dark: #013623;
+    --cs-primary-soft: #e8f4ee;
+    --cs-primary-border: #bcdccc;
+
+    --cs-surface: var(--fa-card-background, #F0F4F1);
+    --cs-surface-alt: var(--fa-table-header, #E2EAE5);
+    --cs-page: var(--fa-app-background, #E5ECE8);
+
+    --cs-text: #172b23;
+    --cs-muted: #52645d;
+    --cs-border: var(--fa-border, #CCD9D1);
+
+    --cs-danger: #b42318;
+    --cs-danger-soft: #fff0ee;
+    --cs-warning: #986600;
+    --cs-warning-soft: #fff5d9;
+    --cs-info: #175b9a;
+    --cs-info-soft: #edf5ff;
+
+    --cs-shadow: 0 3px 14px rgba(20, 52, 36, .055);
+    --cs-radius: 12px;
+    --cs-radius-sm: 8px;
+    --cs-focus: 0 0 0 3px rgba(2, 71, 49, .16);
+}
+
+/* ==================== Workspace ==================== */
+
+.cs-workspace {
+    color: var(--cs-text);
+    min-width: 0;
+}
+
+.cs-workspace,
+.cs-workspace * {
+    box-sizing: border-box;
+}
+
+.cs-workspace [hidden] {
+    display: none !important;
+}
+
+.cs-workspace .cs-muted {
+    color: var(--cs-muted);
+}
+
+.cs-workspace .cs-nowrap {
+    white-space: nowrap;
+}
+
+.cs-workspace .cs-number {
+    font-variant-numeric: tabular-nums;
+}
+
+.cs-workspace .cs-text-right {
+    text-align: right;
+}
+
+.cs-workspace .cs-empty {
+    text-align: center;
+    color: var(--cs-muted);
+    padding: 30px 16px;
+}
+
+.cs-workspace .cs-section {
+    margin-bottom: 22px;
+    min-width: 0;
+}
+
+.cs-workspace .cs-section-heading {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.cs-workspace .cs-section-description {
+    margin: -7px 0 16px;
+    font-size: .875rem;
+    color: var(--cs-muted);
+}
+
+/* ==================== Page Header ==================== */
+
+.cs-workspace .cs-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.cs-workspace .cs-page-title {
+    font-size: clamp(1.4rem, 2vw, 1.85rem);
+    font-weight: 750;
+    line-height: 1.3;
+    margin: 0 0 5px;
+    color: var(--cs-text);
+}
+
+.cs-workspace .cs-page-subtitle {
+    margin: 0;
+    font-size: .9rem;
+    color: var(--cs-muted);
+}
+
+.cs-workspace .cs-page-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+/* ==================== Cards ==================== */
+
+.cs-workspace .cs-card {
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    box-shadow: var(--cs-shadow);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.cs-workspace .cs-card-header {
+    padding: 17px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    border-bottom: 1px solid var(--cs-border);
+}
+
+.cs-workspace .cs-card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.cs-workspace .cs-card-body {
+    padding: 20px;
+}
+
+.cs-workspace .cs-card-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--cs-border);
+    background: var(--cs-surface-alt);
+}
+
+/* ==================== Statistics ==================== */
+
+.cs-workspace .cs-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.cs-workspace .cs-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 19px;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    box-shadow: var(--cs-shadow);
+    min-width: 0;
+}
+
+.cs-workspace .cs-stat-icon {
+    width: 43px;
+    height: 43px;
+    border-radius: 11px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary);
+    font-size: 1.25rem;
+}
+
+.cs-workspace .cs-stat-content {
+    min-width: 0;
+}
+
+.cs-workspace .cs-stat-label {
+    font-size: .79rem;
+    font-weight: 600;
+    color: var(--cs-muted);
+    margin: 0 0 5px;
+}
+
+.cs-workspace .cs-stat-value {
+    font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+    font-weight: 750;
+    line-height: 1.25;
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ==================== Tabs ==================== */
+
+.cs-workspace .cs-tabs {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    padding: 7px;
+    margin-bottom: 20px;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+}
+
+.cs-workspace .cs-tab {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: var(--cs-radius-sm);
+    background: transparent;
+    color: var(--cs-muted);
+    font: inherit;
+    font-size: .875rem;
+    font-weight: 650;
+    padding: 11px 15px;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+}
+
+.cs-workspace .cs-tab:hover {
+    background: var(--cs-surface-alt);
+    color: var(--cs-primary);
+}
+
+.cs-workspace .cs-tab.is-active,
+.cs-workspace .cs-tab[aria-selected="true"] {
+    background: var(--cs-primary);
+    color: #fff;
+}
+
+.cs-workspace .cs-tab-panel {
+    min-width: 0;
+}
+
+.cs-workspace .cs-tab:focus-visible {
+    outline: none;
+    box-shadow: var(--cs-focus);
+}
+
+/* ==================== Buttons ==================== */
+
+.cs-workspace .cs-btn {
+    appearance: none;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    min-height: 40px;
+    border: 1px solid transparent;
+    border-radius: var(--cs-radius-sm);
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 650;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, transform .15s;
+}
+
+.cs-workspace .cs-btn-primary {
+    background: var(--cs-primary);
+    color: white;
+    border-color: var(--cs-primary);
+}
+
+.cs-workspace .cs-btn-primary:hover {
+    color: white;
+    background: var(--cs-primary-dark);
+    border-color: var(--cs-primary-dark);
+}
+
+.cs-workspace .cs-btn-outline {
+    background: var(--fa-card-background, #F0F4F1);
+    color: var(--cs-primary);
+    border-color: var(--cs-primary-border);
+}
+
+.cs-workspace .cs-btn-outline:hover {
+    background: var(--cs-primary-soft);
+    color: var(--cs-primary-dark);
+}
+
+.cs-workspace .cs-btn-danger {
+    background: var(--cs-danger);
+    color: white;
+}
+
+.cs-workspace .cs-btn-danger:hover {
+    background: #891d15;
+    color: white;
+}
+
+.cs-workspace .cs-btn-sm {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: .78rem;
+}
+
+.cs-workspace .cs-btn:disabled,
+.cs-workspace .cs-btn[aria-disabled="true"] {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.cs-workspace .cs-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--cs-focus);
+}
+
+/* ==================== Forms ==================== */
+
+.cs-workspace .cs-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.cs-workspace .cs-form-group {
+    min-width: 0;
+}
+
+.cs-workspace .cs-form-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--cs-text);
+    font-size: .84rem;
+    font-weight: 650;
+}
+
+.cs-workspace .cs-form-control,
+.cs-workspace .cs-form-select {
+    display: block;
+    width: 100%;
+    min-height: 41px;
+    padding: 9px 12px;
+    border: 1px solid #cbd8cf;
+    border-radius: var(--cs-radius-sm);
+    background: var(--fa-input-background, #F3F6F3);
+    color: var(--cs-text);
+    font: inherit;
+    font-size: .875rem;
+}
+
+.cs-workspace textarea.cs-form-control {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.cs-workspace .cs-form-control:focus,
+.cs-workspace .cs-form-select:focus {
+    outline: none;
+    border-color: var(--cs-primary);
+    box-shadow: var(--cs-focus);
+}
+
+.cs-workspace .cs-form-control.is-invalid,
+.cs-workspace .cs-form-select.is-invalid {
+    border-color: var(--cs-danger);
+}
+
+.cs-workspace .cs-form-help {
+    margin-top: 6px;
+    font-size: .77rem;
+    color: var(--cs-muted);
+}
+
+.cs-workspace .cs-form-error {
+    margin-top: 6px;
+    font-size: .79rem;
+    color: var(--cs-danger);
+}
+
+.cs-workspace .cs-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+/* ==================== Excel Export ==================== */
+
+.cs-workspace .cs-export-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.cs-workspace .cs-export-card {
+    padding: 20px;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    min-width: 0;
+}
+
+.cs-workspace .cs-export-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    color: var(--cs-primary);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.cs-workspace .cs-export-description {
+    color: var(--cs-muted);
+    font-size: .83rem;
+    line-height: 1.6;
+    margin: 0 0 16px;
+}
+
+.cs-workspace .cs-export-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.cs-workspace .cs-export-fields > .cs-form-group {
+    flex: 1 1 130px;
+}
+
+.cs-workspace .cs-export-fields > .cs-btn {
+    flex: 0 0 auto;
+}
+
+.cs-workspace .cs-export-note {
+    margin-top: 12px;
+    font-size: .77rem;
+    color: var(--cs-muted);
+}
+
+/* ==================== Tables ==================== */
+
+.cs-workspace .cs-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.cs-workspace .cs-table {
+    border-collapse: collapse;
+    background: var(--fa-table-background, #F0F4F1);
+    width: 100%;
+    min-width: 760px;
+    margin: 0;
+    font-size: .83rem;
+}
+
+.cs-workspace .cs-table thead {
+    background: var(--fa-table-header, #E2EAE5);
+}
+
+.cs-workspace .cs-table th,
+.cs-workspace .cs-table td {
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--cs-border);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.cs-workspace .cs-table th {
+    font-weight: 700;
+    color: var(--cs-muted);
+    white-space: nowrap;
+}
+
+.cs-workspace .cs-table tbody tr:hover {
+    background: #E4ECE7;
+}
+
+.cs-workspace .cs-table td.cs-amount,
+.cs-workspace .cs-table th.cs-amount {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.cs-workspace .cs-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cs-workspace .cs-table-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--cs-border);
+    color: var(--cs-muted);
+    font-size: .8rem;
+}
+
+/* ==================== Status ==================== */
+
+.cs-workspace .cs-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 100px;
+    padding: 5px 10px;
+    font-size: .74rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cs-workspace .cs-status-paid,
+.cs-workspace .cs-status-active {
+    color: var(--cs-primary);
+    background: var(--cs-primary-soft);
+}
+
+.cs-workspace .cs-status-pending {
+    color: var(--cs-warning);
+    background: var(--cs-warning-soft);
+}
+
+.cs-workspace .cs-status-canceled,
+.cs-workspace .cs-status-reversed {
+    color: var(--cs-danger);
+    background: var(--cs-danger-soft);
+}
+
+.cs-workspace .cs-status-neutral {
+    color: var(--cs-muted);
+    background: var(--cs-surface-alt);
+}
+
+/* ==================== Alerts ==================== */
+
+.cs-workspace .cs-alert {
+    border-radius: var(--cs-radius-sm);
+    border: 1px solid var(--cs-border);
+    padding: 12px 15px;
+    margin-bottom: 14px;
+    font-size: .85rem;
+}
+
+.cs-workspace .cs-alert-success {
+    color: var(--cs-primary);
+    background: var(--cs-primary-soft);
+    border-color: var(--cs-primary-border);
+}
+
+.cs-workspace .cs-alert-danger {
+    color: var(--cs-danger);
+    background: var(--cs-danger-soft);
+}
+
+.cs-workspace .cs-alert-warning {
+    color: var(--cs-warning);
+    background: var(--cs-warning-soft);
+}
+
+.cs-workspace .cs-alert-info {
+    color: var(--cs-info);
+    background: var(--cs-info-soft);
+}
+
+.cs-workspace .cs-inline-error {
+    margin: 10px 0 0;
+    color: var(--cs-danger);
+    font-size: .81rem;
+}
+
+/* ==================== Search ==================== */
+
+.cs-workspace .cs-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.cs-workspace .cs-search {
+    max-width: 360px;
+    width: 100%;
+}
+
+.cs-workspace .cs-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ==================== Loading ==================== */
+
+.cs-workspace .cs-btn.is-loading {
+    pointer-events: none;
+    opacity: .75;
+}
+
+.cs-workspace .cs-spinner {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: cs-spin .7s linear infinite;
+}
+
+@keyframes cs-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==================== Print ==================== */
+
+@media print {
+    .cs-workspace .cs-tabs,
+    .cs-workspace .cs-page-actions,
+    .cs-workspace .cs-export-grid,
+    .cs-workspace .cs-btn,
+    .cs-workspace .cs-toolbar,
+    .cs-workspace .cs-table-actions {
+        display: none !important;
+    }
+
+    .cs-workspace .cs-card {
+        box-shadow: none;
+        border-color: #ccc;
+    }
+
+    .cs-workspace .cs-table-wrap {
+        overflow: visible;
+    }
+
+    .cs-workspace .cs-table {
+        min-width: 0;
+    }
+
+    .cs-workspace .cs-tab-panel[hidden] {
+        display: none !important;
+    }
+}
+
+/* ==================== Responsive ==================== */
+
+@media (max-width: 1199px) {
+    .cs-workspace .cs-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .cs-workspace .cs-page-header {
+        align-items: stretch;
+    }
+
+    .cs-workspace .cs-stats,
+    .cs-workspace .cs-export-grid,
+    .cs-workspace .cs-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cs-workspace .cs-card-header,
+    .cs-workspace .cs-card-body,
+    .cs-workspace .cs-export-card {
+        padding: 15px;
+    }
+
+    .cs-workspace .cs-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .cs-workspace .cs-tab {
+        flex: 0 0 auto;
+    }
+
+    .cs-workspace .cs-export-fields {
+        align-items: stretch;
+    }
+
+    .cs-workspace .cs-export-fields > .cs-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .cs-workspace .cs-stat-card {
+        padding: 14px;
+    }
+
+    .cs-workspace .cs-stat-value {
+        font-size: 1.1rem;
+    }
+
+    .cs-workspace .cs-form-actions .cs-btn {
+        flex: 1 1 auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cs-workspace *,
+    .cs-workspace *::before,
+    .cs-workspace *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+
+/* =====================================================
+   MONTHLY CONTRIBUTION RECORDS TABLE
+===================================================== */
+
+.cs-monthly-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.cs-monthly-table th,
+.cs-monthly-table td {
+    border: 1px solid #000000;
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
+.cs-monthly-table thead th {
+    background: #024731;
+    color: #ffffff;
+    text-align: center;
+    font-weight: 600;
+    white-space: normal;
+}
+
+.cs-monthly-table tbody tr:nth-child(even) {
+    background: #f2f8f5;
+}
+
+.cs-monthly-table .cs-number {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.cs-monthly-table .cs-employee-name {
+    text-align: left;
+    min-width: 190px;
+}
+
+.cs-monthly-table .cs-outstanding {
+    background: #fde8e7;
+    font-weight: 600;
+}
+
+.cs-monthly-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+
+
+/* ==================================================
+   FUNDAXIS MONTHLY CONTRIBUTION REGISTER
+================================================== */
+
+.cs-register-workspace {
+    width: 100%;
+}
+
+.cs-register-workspace .cs-card {
+    background: var(--fa-card-background, #F0F4F1);
+    border: 1px solid #d5dfdb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.cs-register-workspace .cs-card-header {
+    padding: 14px 16px;
+    background: #f5f8f7;
+    border-bottom: 1px solid #d5dfdb;
+}
+
+.cs-register-workspace .cs-card-body {
+    padding: 15px;
+}
+
+.cs-register-workspace .cs-monthly-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.cs-register-workspace .cs-monthly-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+}
+
+.cs-register-workspace .cs-monthly-table th,
+.cs-register-workspace .cs-monthly-table td {
+    border: 1px solid #000;
+    padding: 9px 10px;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.cs-register-workspace .cs-monthly-table th {
+    background: #024731;
+    color: white;
+    text-align: center;
+    font-weight: 600;
+}
+
+.cs-register-workspace .cs-monthly-table tbody tr:nth-child(even) {
+    background: #f2f8f5;
+}
+
+.cs-register-workspace .cs-amount,
+.cs-register-workspace .cs-number {
+    text-align: center;
+}
+
+.cs-register-workspace .cs-employee-name {
+    min-width: 190px;
+    text-align: left;
+}
+
+.cs-register-workspace .cs-outstanding {
+    color: #b42318;
+    background: #fff0ee;
+    font-weight: 700;
+}
+
+
+/* ==========================================
+   MONTHLY REGISTER GRAND TOTAL
+========================================== */
+
+.cs-monthly-table .register-grand-total td {
+    background-color: #024731 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    border: 1px solid #000000 !important;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.cs-monthly-table .register-grand-total td:first-child {
+    text-align: left;
+    padding-left: 15px;
+}
+
+
+/* ==========================================
+   SHARE HOLDINGS - MONTHLY TOTAL
+========================================== */
+
+.cs-holdings-total-row td {
+    background-color: #024731 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    border-top: 2px solid #012d20;
+    padding: 12px 14px;
+    white-space: nowrap;
+}
+
+.cs-holdings-total-row .cs-amount {
+    text-align: right;
+}
+
+/* ==========================================
+   MANAGE HOLDING - GREEN DIVIDER
+========================================== */
+
+@media (min-width: 768px) {
+
+    .cs-manage-rate-section {
+        border-left: 3px solid #024731;
+        padding-left: 24px;
+    }
+
+    .cs-manage-quantity-section {
+        padding-right: 18px;
+    }
+}
+
+@media (max-width: 767.98px) {
+
+    .cs-manage-rate-section {
+        border-left: none;
+        border-top: 3px solid #024731;
+        padding-top: 20px;
+        margin-top: 12px;
+    }
+}
+
+
+
+/* SHARE SEARCH - CLEAR BUTTON */
+
+.cs-clear-shares-btn {
+    border: 1px solid #b8c8c2;
+    background: var(--fa-card-background, #F0F4F1);
+    color: #024731;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.cs-clear-shares-btn:hover {
+    background: #eaf4ef;
+    color: #024731;
+    border-color: #024731;
+}
+
+.cs-clear-shares-btn:focus-visible {
+    outline: 2px solid #024731;
+    outline-offset: 2px;
+}
+
+
+
+
+
+
+/* ==========================================
+   CONTRIBUTION STATUS BADGES
+========================================== */
+
+#contributionsTable .cs-status.cs-contribution-paid {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #86efac !important;
+    font-weight: 700;
+}
+
+#contributionsTable .cs-status.cs-contribution-pending {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid #fcd34d !important;
+    font-weight: 700;
+}
+
+#contributionsTable .cs-status.cs-contribution-canceled {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fca5a5 !important;
+    font-weight: 700;
+}
+
+#contributionsTable .cs-status.cs-contribution-unknown {
+    background-color: #e5e7eb !important;
+    color: #374151 !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: 700;
+}
+
+
+/* ==========================================
+   CONTRIBUTION TABLE - COLUMN ALIGNMENT
+========================================== */
+
+#contributionsTable th.cs-col-center,
+#contributionsTable td.cs-col-center {
+    text-align: center !important;
+    vertical-align: middle;
+}
+
+#contributionsTable th.cs-col-status,
+#contributionsTable td.cs-col-status {
+    min-width: 130px;
+    white-space: nowrap;
+}
+
+#contributionsTable th.cs-col-actions,
+#contributionsTable td.cs-col-actions {
+    min-width: 190px;
+    white-space: nowrap;
+}
+
+#contributionsTable .cs-table-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+
+/* MEMBER CREDIT - SEPARATE FROM MONTHLY PAYMENT */
+
+.cs-member-credit-card {
+    border: 1px solid #f0d58a;
+    background-color: #fffdf5;
+}
+
+.cs-member-credit-card .cs-card-header {
+    background-color: #fff4d6;
+    border-bottom: 1px solid #f0d58a;
+}
+
+.cs-member-credit-card .cs-card-title {
+    color: #7c5200;
+}
+
+
+/* ==========================================
+   PAYMENTS WORKSPACE - ADMIN FRIENDLY ORDER
+========================================== */
+
+.cs-payments-tab {
+    display: flex;
+    flex-direction: column;
+}
+
+.cs-payments-tab > .cs-card {
+    order: 5;
+    width: 100%;
+}
+
+.cs-payments-tab > .cs-payment-search-card {
+    order: 1;
+}
+
+.cs-payments-tab > .cs-payment-results-card {
+    order: 2;
+}
+
+.cs-payments-tab > .cs-payment-detail-card,
+.cs-payments-tab > .cs-payment-empty-card {
+    order: 3;
+}
+
+#monthlyPaymentsTable th,
+#monthlyPaymentsTable td {
+    vertical-align: middle;
+}
+
+#monthlyPaymentsTable .cs-col-center {
+    text-align: center;
+}
+
+#monthlyPaymentsTable td.cs-col-center .cs-btn {
+    white-space: nowrap;
+}
+
+
+#monthlyPaymentsTable .cs-contribution-paid {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+#monthlyPaymentsTable .cs-contribution-pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+#monthlyPaymentsTable .cs-contribution-canceled {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+
+
+/* ==========================================
+   MEMBER CREDIT COLLAPSIBLE SECTION
+========================================== */
+
+.cs-member-credit-collapse {
+    margin-top: 16px;
+    border: 1px solid #e5d5a6;
+    border-radius: 12px;
+    background: var(--fa-card-background, #F0F4F1);
+    overflow: hidden;
+}
+
+.cs-member-credit-toggle {
+    padding: 16px 18px;
+    background: #fff4d6;
+    color: #725000;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.cs-member-credit-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.cs-member-credit-toggle::after {
+    content: "â–¾";
+    float: right;
+    font-size: 18px;
+}
+
+.cs-member-credit-collapse[open]
+.cs-member-credit-toggle::after {
+    content: "â–´";
+}
+
+.cs-member-credit-content {
+    padding: 16px;
+}
+
+.cs-member-credit-content > .cs-card:last-child {
+    margin-bottom: 0 !important;
+}
+
+
+
+
+
+/* ========== SINGLE MONTH RECORDS ONLY: CALM ADMIN UI ========== */
+.cs-workspace .cs-single-month {display:grid;gap:18px;min-width:0;color:#20352d}
+.cs-workspace .cs-sm-toolbar,.cs-workspace .cs-sm-summary-head,.cs-workspace .cs-sm-record-head {display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.cs-workspace .cs-sm-toolbar {padding:8px 2px 0}
+.cs-workspace .cs-sm-heading {font-size:1.1rem;font-weight:750;margin:0 0 4px}
+.cs-workspace .cs-sm-subheading {font-size:.83rem;color:#75847b;margin:0}
+.cs-workspace .cs-sm-export,.cs-workspace .cs-sm-search-btn,.cs-workspace .cs-sm-detail-btn,.cs-workspace .cs-sm-payment-link {display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;border-radius:8px;font-weight:650}
+.cs-workspace .cs-sm-export {padding:10px 14px;background:var(--fa-card-background, #F0F4F1);color:#07593e;border:1px solid #bcd9c9;font-size:.82rem}
+.cs-workspace .cs-sm-export:hover,.cs-workspace .cs-sm-detail-btn:hover {background:#eaf5ee;color:#024731}
+.cs-workspace .cs-sm-filters {display:grid;grid-template-columns:minmax(90px,.65fr) minmax(135px,1fr) minmax(180px,1.5fr) minmax(130px,1fr) auto;gap:12px;align-items:end;padding:18px;background:var(--fa-card-background, #F0F4F1);border:1px solid #e2e9e5;border-radius:12px;box-shadow:0 2px 12px rgba(16,48,34,.035)}
+.cs-workspace .cs-sm-field {min-width:0}
+.cs-workspace .cs-sm-field label {display:block;font-size:.76rem;font-weight:700;margin:0 0 7px;color:#53665b}
+.cs-workspace .cs-sm-field input,.cs-workspace .cs-sm-field select {width:100%;height:40px;padding:0 11px;border:1px solid #d5e0d9;border-radius:8px;background:var(--fa-input-background, #F3F6F3);color:#263d32;font-size:.84rem}
+.cs-workspace .cs-sm-field input:focus,.cs-workspace .cs-sm-field select:focus {outline:none;border-color:#317c58;box-shadow:0 0 0 3px #dceee2}
+.cs-workspace .cs-sm-filter-actions {display:flex;align-items:center;gap:9px}
+.cs-workspace .cs-sm-search-btn {border:0;min-height:40px;padding:0 15px;background:#07553b;color:#fff;white-space:nowrap;font-size:.82rem}
+.cs-workspace .cs-sm-search-btn:hover {background:#013d2a}
+.cs-workspace .cs-sm-reset {color:#667d6e;text-decoration:none;font-size:.8rem}
+.cs-workspace .cs-sm-summary,.cs-workspace .cs-sm-record-card {background:var(--fa-card-background, #F0F4F1);border:1px solid #e1e9e4;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(16,48,34,.035)}
+.cs-workspace .cs-sm-summary {padding:18px}
+.cs-workspace .cs-sm-summary-head {margin-bottom:15px}
+.cs-workspace .cs-sm-summary-head h6,.cs-workspace .cs-sm-record-head h6 {font-size:.94rem;font-weight:750;margin:0 0 4px}
+.cs-workspace .cs-sm-summary-head h6 span {color:#138251}
+.cs-workspace .cs-sm-summary-head small,.cs-workspace .cs-sm-record-head>span {color:#809087;font-size:.76rem}
+.cs-workspace .cs-sm-pills {display:flex;flex-wrap:wrap;gap:7px}
+.cs-workspace .cs-sm-pill {border-radius:100px;padding:5px 9px;font-size:.72rem;font-weight:700}
+.cs-workspace .cs-sm-paid {background:#e6f5ec;color:#11653f}.cs-workspace .cs-sm-pending {background:#fff2dc;color:#8a6016}.cs-workspace .cs-sm-canceled {background:#fff0ee;color:#ad3b32}
+.cs-workspace .cs-sm-summary-grid {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.cs-workspace .cs-sm-metric {min-width:0;padding:15px 12px;border-radius:9px;border:1px solid #e6ede8;background:var(--fa-card-background,#F0F4F1)}
+.cs-workspace .cs-sm-metric span {display:block;font-size:.73rem;color:#718077;margin:0 0 8px}
+.cs-workspace .cs-sm-metric strong {font-size:1.02rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:#273c31}
+.cs-workspace .cs-sm-metric .cs-sm-green {color:#08734c}.cs-workspace .cs-sm-metric .cs-sm-red {color:#c14b3c}
+.cs-workspace .cs-sm-summary-footer {display:flex;align-items:center;gap:12px;margin-top:15px;color:#6d7f73;font-size:.78rem}
+.cs-workspace .cs-sm-summary-footer strong {color:#135c40}
+.cs-workspace .cs-sm-progress {height:7px;border-radius:20px;background:#e7efe9;flex:1;overflow:hidden}
+.cs-workspace .cs-sm-progress span {display:block;height:100%;background:#31916a;border-radius:20px;max-width:100%}
+.cs-workspace .cs-sm-record-head {padding:17px 19px;border-bottom:1px solid #e8eeea}
+.cs-workspace .cs-sm-record-head h6 {margin:0}
+.cs-workspace .cs-sm-table-wrap {width:100%;overflow-x:auto}
+.cs-workspace .cs-sm-table {width:100%;min-width:1090px;border-collapse:collapse;font-size:.79rem}
+.cs-workspace .cs-sm-table thead {background:#f0f6f2}
+.cs-workspace .cs-sm-table th {padding:13px 12px;text-align:left;font-weight:750;color:#4c6657;white-space:nowrap;border-bottom:1px solid #dce9df}
+.cs-workspace .cs-sm-table td {padding:14px 12px;color:#34483d;border-bottom:1px solid #edf1ee;vertical-align:middle;white-space:nowrap}
+.cs-workspace .cs-sm-table tbody tr:hover {background:#E4ECE7}
+.cs-workspace .cs-sm-table tbody tr:last-child td {border-bottom:0}
+.cs-workspace .cs-sm-table .cs-sm-num {text-align:right;font-variant-numeric:tabular-nums}
+.cs-workspace .cs-sm-table .cs-sm-id,.cs-workspace .cs-sm-table .cs-sm-name {font-weight:700}
+.cs-workspace .cs-sm-table .cs-sm-name {min-width:140px}
+.cs-workspace .cs-sm-table .cs-sm-settled {color:#096b48;font-weight:700}
+.cs-workspace .cs-sm-table .cs-sm-owing {color:#b34937;font-weight:750;background:#fff8f6}
+.cs-workspace .cs-sm-table .cs-sm-muted-row td {opacity:.68}
+.cs-workspace .cs-sm-detail-btn {font-size:.76rem;padding:7px 10px;background:var(--fa-card-background, #F0F4F1);border:1px solid #d4e5d9;color:#176442;white-space:nowrap}
+.cs-workspace .cs-sm-empty {text-align:center;padding:30px!important;color:#829086!important}
+.cs-workspace .cs-sm-pagination {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid #e8eeea;font-size:.78rem;color:#7a8c80}
+.cs-workspace .cs-sm-pagination .page-link {color:#155a40;border-color:#e0e9e3}
+.cs-workspace .cs-sm-pagination .page-item.active .page-link {background:#07553b;border-color:#07553b;color:white}
+.cs-workspace .cs-sm-modal .modal-content {border:0;border-radius:14px;overflow:hidden}
+.cs-workspace .cs-sm-modal .modal-header {background:#f3f8f5;border-bottom:1px solid #dfeae2}
+.cs-workspace .cs-sm-modal .modal-header small {font-size:.78rem;color:#697c70}
+.cs-workspace .cs-sm-modal-label {color:#185b40;font-weight:750;font-size:.85rem;margin:8px 0 11px}
+.cs-workspace .cs-sm-detail-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.cs-workspace .cs-sm-detail-grid>div {padding:10px 12px;border:1px solid #ebf0ec;border-radius:8px;background:var(--fa-card-background,#F0F4F1)}
+.cs-workspace .cs-sm-detail-grid dt {font-size:.71rem;color:#73857a;font-weight:600;margin-bottom:4px}
+.cs-workspace .cs-sm-detail-grid dd {margin:0;color:#293f33;font-size:.87rem;font-weight:650;overflow-wrap:anywhere}
+.cs-workspace .cs-sm-detail-full {grid-column:1/-1}
+.cs-workspace .cs-sm-payment-link {padding:8px 13px;background:#e9f5ee;color:#166545;font-size:.82rem;margin-right:auto}
+@media(max-width:1180px){.cs-workspace .cs-sm-filters {grid-template-columns:repeat(2,minmax(0,1fr))}.cs-workspace .cs-sm-search {grid-column:span 2}.cs-workspace .cs-sm-filter-actions {grid-column:span 2}.cs-workspace .cs-sm-summary-grid {grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.cs-workspace .cs-sm-filters {grid-template-columns:1fr}.cs-workspace .cs-sm-search,.cs-workspace .cs-sm-filter-actions {grid-column:auto}.cs-workspace .cs-sm-summary-grid {grid-template-columns:repeat(2,minmax(0,1fr))}.cs-workspace .cs-sm-detail-grid {grid-template-columns:1fr}}
+
+
+
+/* ==== MONTHLY RECORDS > MONTHLY CONTRIBUTION REGISTER ONLY ==== */
+
+.cs-workspace .cs-monthly-register {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    min-width: 0;
+    max-width: 100%;
+    color: #21382d;
+    --mr-id-width: 140px;
+    --mr-name-width: 220px;
+}
+
+.cs-workspace .cs-monthly-register .cs-mr-toolbar,
+.cs-workspace .cs-monthly-register .cs-mr-summary-head,
+.cs-workspace .cs-monthly-register .cs-mr-record-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* Header and export action mirror the Single Month Records visual language. */
+.cs-workspace .cs-monthly-register .cs-mr-toolbar { padding: 8px 2px 0; }
+.cs-workspace .cs-monthly-register h5 { margin: 0 0 5px; font-size: 1.1rem; font-weight: 750; }
+.cs-workspace .cs-monthly-register h6 { margin: 0 0 5px; font-size: .94rem; font-weight: 750; }
+.cs-workspace .cs-monthly-register .cs-mr-toolbar p,
+.cs-workspace .cs-monthly-register .cs-mr-record-head p { margin: 0; color: #65796d; font-size: .83rem; }
+.cs-workspace .cs-monthly-register .cs-mr-export {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 10px 14px;
+    border: 1px solid #bcd9c9;
+    border-radius: 8px;
+    background: var(--fa-card-background, #F0F4F1);
+    color: #07593e;
+    font-size: .82rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: background-color .15s, border-color .15s;
+}
+.cs-workspace .cs-monthly-register .cs-mr-export:hover { background: #eaf5ee; border-color: #7ba98e; color: #024731; }
+
+/* Filters stay within the workspace; wide tables scroll in their own container. */
+.cs-workspace .cs-monthly-register .cs-mr-filter {
+    display: grid;
+    grid-template-columns: minmax(145px, 1fr) minmax(145px, 1fr) minmax(200px, 1.6fr) auto;
+    align-items: end;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid #e2e9e5;
+    border-radius: 12px;
+    background: var(--fa-card-background, #F0F4F1);
+    box-shadow: 0 2px 12px rgba(16, 48, 34, .035);
+}
+.cs-workspace .cs-monthly-register .cs-mr-filter > div { min-width: 0; }
+.cs-workspace .cs-monthly-register .cs-mr-filter label { display: block; margin: 0 0 7px; color: #53665b; font-size: .76rem; font-weight: 700; }
+.cs-workspace .cs-monthly-register .cs-mr-filter input:not([type="hidden"]) {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 11px;
+    border: 1px solid #d5e0d9;
+    border-radius: 8px;
+    background: var(--fa-input-background, #F3F6F3);
+    color: #263d32;
+    font: inherit;
+    font-size: .84rem;
+}
+.cs-workspace .cs-monthly-register .cs-mr-filter input:focus-visible { outline: 2px solid #317c58; outline-offset: 2px; }
+.cs-workspace .cs-monthly-register .cs-mr-filter-actions { display: flex; align-items: center; gap: 12px; }
+.cs-workspace .cs-monthly-register .cs-mr-filter-actions button {
+    min-height: 42px;
+    padding: 0 15px;
+    border: 0;
+    border-radius: 8px;
+    background: #07553b;
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 650;
+    white-space: nowrap;
+}
+.cs-workspace .cs-monthly-register .cs-mr-filter-actions button:hover { background: #013d2a; }
+.cs-workspace .cs-monthly-register .cs-mr-filter-actions a { display: inline-flex; align-items: center; min-height: 42px; color: #526e5e; font-size: .82rem; text-underline-offset: 3px; }
+
+/* Financial overview: six metrics, followed by the collection rate. */
+.cs-workspace .cs-monthly-register .cs-mr-summary,
+.cs-workspace .cs-monthly-register .cs-mr-record-card {
+    min-width: 0;
+    border: 1px solid #e1e9e4;
+    border-radius: 12px;
+    background: var(--fa-card-background, #F0F4F1);
+    box-shadow: 0 2px 12px rgba(16, 48, 34, .035);
+}
+.cs-workspace .cs-monthly-register .cs-mr-summary { padding: 18px; }
+.cs-workspace .cs-monthly-register .cs-mr-summary-head { margin-bottom: 16px; }
+.cs-workspace .cs-monthly-register .cs-mr-summary-head small,
+.cs-workspace .cs-monthly-register .cs-mr-record-head > span { color: #65796d; font-size: .77rem; }
+.cs-workspace .cs-monthly-register .cs-mr-chip { padding: 6px 10px; border-radius: 30px; background: #e9f5ee; color: #166545; font-size: .75rem; font-weight: 700; }
+.cs-workspace .cs-monthly-register .cs-mr-metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.cs-workspace .cs-monthly-register .cs-mr-metrics > div { min-width: 0; padding: 15px 12px; border: 1px solid #e6ede8; border-radius: 9px; background: var(--fa-card-background,#F0F4F1); }
+.cs-workspace .cs-monthly-register .cs-mr-metrics span { display: block; min-height: 2.8em; margin-bottom: 9px; color: #627568; font-size: .75rem; line-height: 1.4; }
+.cs-workspace .cs-monthly-register .cs-mr-metrics small { font-size: inherit; white-space: nowrap; }
+.cs-workspace .cs-monthly-register .cs-mr-metrics strong { font-size: 1.03rem; font-weight: 750; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cs-workspace .cs-monthly-register .cs-mr-positive { color: #08734c; }
+.cs-workspace .cs-monthly-register .cs-mr-negative { color: #b34937; }
+.cs-workspace .cs-monthly-register .cs-mr-rate { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; color: #627568; font-size: .79rem; }
+.cs-workspace .cs-monthly-register .cs-mr-rate strong { color: #135c40; font-variant-numeric: tabular-nums; }
+.cs-workspace .cs-monthly-register .cs-mr-progress { flex: 1 1 180px; height: 8px; border-radius: 20px; background: #e7efe9; overflow: hidden; }
+.cs-workspace .cs-monthly-register .cs-mr-progress span { display: block; height: 100%; max-width: 100%; border-radius: inherit; background: #31916a; }
+
+/* Only this wrapper scrolls. Separate borders keep sticky cells reliable. */
+.cs-workspace .cs-monthly-register .cs-mr-record-card { overflow: hidden; }
+.cs-workspace .cs-monthly-register .cs-mr-record-head { padding: 18px; border-bottom: 1px solid #e8eeea; }
+.cs-workspace .cs-monthly-register .cs-mr-table-wrap { width: 100%; max-width: 100%; overflow-x: auto; isolation: isolate; }
+.cs-workspace .cs-monthly-register .cs-mr-table-wrap:focus-visible { outline: 2px solid #317c58; outline-offset: -2px; }
+.cs-workspace .cs-monthly-register .cs-mr-table {
+    width: max-content;
+    min-width: 100%;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: .8rem;
+    line-height: 1.5;
+}
+.cs-workspace .cs-monthly-register .cs-mr-table th,
+.cs-workspace .cs-monthly-register .cs-mr-table td { min-width: 125px; padding: 14px 16px; border: 0; border-bottom: 1px solid #e7eee9; vertical-align: middle; white-space: nowrap; }
+.cs-workspace .cs-monthly-register .cs-mr-table th { background: #eef6f0; color: #456351; text-align: right; font-weight: 700; }
+.cs-workspace .cs-monthly-register .cs-mr-table th:nth-child(-n+4) { text-align: left; }
+.cs-workspace .cs-monthly-register .cs-mr-table th:first-child,
+.cs-workspace .cs-monthly-register .cs-mr-table tbody td:first-child { min-width: 60px; }
+.cs-workspace .cs-monthly-register .cs-mr-table tbody tr { --mr-row-bg: #fff; }
+.cs-workspace .cs-monthly-register .cs-mr-table tbody tr:nth-child(even) { --mr-row-bg: #f8fbf9; }
+.cs-workspace .cs-monthly-register .cs-mr-table tbody tr:hover { --mr-row-bg: #eef6f0; }
+.cs-workspace .cs-monthly-register .cs-mr-table tbody td { background: var(--mr-row-bg); }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-num { text-align: right; font-variant-numeric: tabular-nums; }
+.cs-workspace .cs-monthly-register .cs-mr-bold { font-weight: 750; }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-na { color: #738379; }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-has-payment { color: #08734c; font-weight: 650; }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-cancelled { color: #8c5847; background: #fcf3ee; font-size: .75rem; font-weight: 650; text-align: center; }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-owing { color: #b34937; background: #fff7f4; }
+
+/* Explicit widths make the second sticky offset equal the first column width.
+   Target only ID/name cells: the empty state and merged total label stay ordinary. */
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-id,
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-name { position: sticky; z-index: 2; font-weight: 700; box-sizing: border-box; }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-id { left: 0; width: var(--mr-id-width); min-width: var(--mr-id-width); max-width: var(--mr-id-width); overflow-wrap: anywhere; white-space: normal; }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-name { left: var(--mr-id-width); width: var(--mr-name-width); min-width: var(--mr-name-width); max-width: var(--mr-name-width); white-space: normal; overflow-wrap: anywhere; border-right: 1px solid #d4e2d8; }
+.cs-workspace .cs-monthly-register .cs-mr-table thead .cs-mr-id,
+.cs-workspace .cs-monthly-register .cs-mr-table thead .cs-mr-name { z-index: 3; background: #eef6f0; }
+.cs-workspace .cs-monthly-register .cs-mr-table .cs-mr-empty { padding: 32px 18px; text-align: center; color: #65796d; }
+.cs-workspace .cs-monthly-register .cs-mr-grand-total td { padding-top: 16px; padding-bottom: 16px; border-bottom: 0; background: #024731; color: #fff; font-weight: 750; }
+.cs-workspace .cs-monthly-register .cs-mr-total-label { text-align: left; letter-spacing: .04em; }
+.cs-workspace .cs-monthly-register .cs-mr-table-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 14px 18px; color: #52645D; background: var(--fa-table-header,#E2EAE5); font-size: .75rem; }
+.cs-workspace .cs-monthly-register .cs-mr-note { margin: 0; color: #627568; font-size: .77rem; line-height: 1.6; }
+
+/* The sidebar reduces usable laptop width; wrap metrics before they get cramped. */
+@media (max-width: 1450px) {
+    .cs-workspace .cs-monthly-register .cs-mr-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1180px) {
+    .cs-workspace .cs-monthly-register .cs-mr-filter { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cs-workspace .cs-monthly-register .cs-mr-search { grid-column: 1 / -1; }
+    .cs-workspace .cs-monthly-register .cs-mr-filter-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 650px) {
+    .cs-workspace .cs-monthly-register { --mr-id-width: 112px; --mr-name-width: 170px; }
+    .cs-workspace .cs-monthly-register .cs-mr-filter { grid-template-columns: minmax(0, 1fr); }
+    .cs-workspace .cs-monthly-register .cs-mr-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cs-workspace .cs-monthly-register .cs-mr-export { width: 100%; }
+    .cs-workspace .cs-monthly-register .cs-mr-table th,
+    .cs-workspace .cs-monthly-register .cs-mr-table td { padding: 12px; }
+}

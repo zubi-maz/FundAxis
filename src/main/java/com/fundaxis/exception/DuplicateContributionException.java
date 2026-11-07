@@ -8,4 +8,8 @@ public class DuplicateContributionException extends RuntimeException{
 
     }
 
+    public DuplicateContributionException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }

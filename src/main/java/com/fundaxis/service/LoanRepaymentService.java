@@ -34,7 +34,7 @@ public class LoanRepaymentService {
     @Transactional
     public LoanRepayment createLoanRepayment(Long repaymentScheduleId, LoanRepayment loanRepayment) {
 
-        RepaymentSchedule schedule = findRepaymentScheduleById(repaymentScheduleId);
+        RepaymentSchedule schedule = findRepaymentScheduleByIdForUpdate(repaymentScheduleId);
 
         // Cancelled installments cannot receive repayments
         if (schedule.getInstallmentStatus() == RepaymentSchedule.InstallmentStatus.CANCELLED) {
@@ -195,7 +195,7 @@ public class LoanRepaymentService {
     @Transactional
     public LoanRepayment startProcessing(Long id) {
 
-        LoanRepayment loanRepayment = findLoanRepaymentById(id);
+        LoanRepayment loanRepayment = findLoanRepaymentByIdForUpdate(id);
 
         // Only PENDING repayments can start processing
         if (loanRepayment.getRepaymentStatus() != LoanRepayment.RepaymentStatus.PENDING) {
@@ -204,7 +204,8 @@ public class LoanRepaymentService {
 
         }
 
-        RepaymentSchedule schedule = loanRepayment.getRepaymentSchedule();
+        RepaymentSchedule schedule = findRepaymentScheduleByIdForUpdate(
+                loanRepayment.getRepaymentSchedule().getId());
 
         // Recheck installment state before processing
         if (schedule.getInstallmentStatus() == RepaymentSchedule.InstallmentStatus.CANCELLED) {
@@ -235,7 +236,7 @@ public class LoanRepaymentService {
     @Transactional
     public LoanRepayment completeLoanRepayment(Long id, String processedBy) {
 
-        LoanRepayment loanRepayment = findLoanRepaymentById(id);
+        LoanRepayment loanRepayment = findLoanRepaymentByIdForUpdate(id);
 
         // Only PROCESSING repayments can be completed
         if (loanRepayment.getRepaymentStatus() != LoanRepayment.RepaymentStatus.PROCESSING) {
@@ -246,7 +247,8 @@ public class LoanRepaymentService {
 
         String normalizedProcessedBy = normalizeRequiredText(processedBy, "Processed by is required");
 
-        RepaymentSchedule schedule = loanRepayment.getRepaymentSchedule();
+        RepaymentSchedule schedule = findRepaymentScheduleByIdForUpdate(
+                loanRepayment.getRepaymentSchedule().getId());
 
         // Cancelled installments cannot receive money
         if (schedule.getInstallmentStatus() == RepaymentSchedule.InstallmentStatus.CANCELLED) {
@@ -324,7 +326,7 @@ public class LoanRepaymentService {
     @Transactional
     public LoanRepayment failLoanRepayment(Long id, String failureReason) {
 
-        LoanRepayment loanRepayment = findLoanRepaymentById(id);
+        LoanRepayment loanRepayment = findLoanRepaymentByIdForUpdate(id);
 
         // Only PROCESSING repayments can fail
         if (loanRepayment.getRepaymentStatus() != LoanRepayment.RepaymentStatus.PROCESSING) {
@@ -351,7 +353,7 @@ public class LoanRepaymentService {
     @Transactional
     public LoanRepayment cancelLoanRepayment(Long id, String cancellationReason) {
 
-        LoanRepayment loanRepayment = findLoanRepaymentById(id);
+        LoanRepayment loanRepayment = findLoanRepaymentByIdForUpdate(id);
 
         // Only PENDING repayments can be cancelled
         if (loanRepayment.getRepaymentStatus() != LoanRepayment.RepaymentStatus.PENDING) {
@@ -384,12 +386,17 @@ public class LoanRepaymentService {
 
     }
 
+    private LoanRepayment findLoanRepaymentByIdForUpdate(Long id) {
+        return loanRepaymentRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new LoanRepaymentNotFoundException(
+                        "Loan repayment not found with ID: " + id));
+    }
 
-    ///---------- Find Repayment Schedule Or Return A Meaningful 404 Error ----------
-    private RepaymentSchedule findRepaymentScheduleById(Long repaymentScheduleId) {
 
-        return repaymentScheduleRepository.findById(repaymentScheduleId).orElseThrow(() -> new RepaymentScheduleNotFoundException("Repayment schedule not found with ID: " + repaymentScheduleId));
-
+    private RepaymentSchedule findRepaymentScheduleByIdForUpdate(Long repaymentScheduleId) {
+        return repaymentScheduleRepository.findByIdForUpdate(repaymentScheduleId)
+                .orElseThrow(() -> new RepaymentScheduleNotFoundException(
+                        "Repayment schedule not found with ID: " + repaymentScheduleId));
     }
 
 

@@ -53,6 +53,18 @@ public class Loan {
     @JoinColumn(name = "employee_id", nullable = false, foreignKey = @ForeignKey(name = "fk_loan_employee"))
     private Employee employee;
 
+    /** Optional internal employee guarantor; null for legacy/external or absent guarantors. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guarantor_employee_id", foreignKey = @ForeignKey(name = "fk_loan_guarantor_employee"))
+    private Employee guarantorEmployee;
+
+    /** Preserves a historical guarantor name when no verified employee match exists. */
+    @Column(name = "legacy_guarantor_name", length = 200)
+    private String legacyGuarantorName;
+
+    @Column(name = "created_by", length = 100)
+    private String createdBy;
+
 
     ///---------- Loan Type ----------
     public enum LoanType {
@@ -92,6 +104,10 @@ public class Loan {
     @Column(name = "tenure_months", nullable = false)
     private Integer tenureMonths;
 
+    @Min(value = 1, message = "Approved tenure must be at least 1 month")
+    @Column(name = "approved_tenure_months")
+    private Integer approvedTenureMonths;
+
 
     ///---------- Interest Rate ----------
     // Example: 5.50%
@@ -115,6 +131,18 @@ public class Loan {
     // Null until the loan is approved
     @Column(name = "approval_date")
     private LocalDate approvalDate;
+
+    @Column(name = "approved_by", length = 100)
+    private String approvedBy;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "rejected_by", length = 100)
+    private String rejectedBy;
+
+    @Column(name = "rejected_at")
+    private LocalDateTime rejectedAt;
 
 
     ///---------- Loan Status ----------

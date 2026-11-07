@@ -1,4 +1,4 @@
-package com.fundaxis.controller;
+package com.fundaxis.controller.api;
 
 import com.fundaxis.entity.Contribution;
 import com.fundaxis.service.ContributionService;

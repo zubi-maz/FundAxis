@@ -1,5 +1,5 @@
-/* =========================================================
-   FundAxis — Admin User Account Management
+﻿/* =========================================================
+   FundAxis â€” Admin User Account Management
    Shared stylesheet for:
 
    - user-accounts.html
@@ -25,10 +25,10 @@
     --ua-text: #1f2d28;
     --ua-muted: #68766f;
 
-    --ua-border: #dfe7e3;
+    --ua-border: var(--fa-border, #CCD9D1);
 
-    --ua-surface: #ffffff;
-    --ua-surface-soft: #f7faf8;
+    --ua-surface: var(--fa-card-background, #F0F4F1);
+    --ua-surface-soft: var(--fa-table-header, #E2EAE5);
 
     --ua-success: #157347;
     --ua-success-soft: #eaf7f0;
@@ -1511,7 +1511,7 @@
             0.55rem;
 
     background:
-            #ffffff;
+            var(--fa-card-background, #F0F4F1);
 
     color:
             var(--ua-danger);
@@ -1573,7 +1573,7 @@
             0.55rem;
 
     background:
-            #ffffff;
+            var(--fa-card-background, #F0F4F1);
 
     color:
             var(--ua-warning);
@@ -1626,7 +1626,7 @@
 
 
 /* =========================================================
-   19. RESPONSIVE — TABLET
+   19. RESPONSIVE â€” TABLET
 ========================================================= */
 
 @media (max-width: 1199.98px) {
@@ -1647,7 +1647,7 @@
 
 
 /* =========================================================
-   20. RESPONSIVE — MOBILE
+   20. RESPONSIVE â€” MOBILE
 ========================================================= */
 
 @media (max-width: 767.98px) {
@@ -1724,7 +1724,7 @@
 
 
 /* =========================================================
-   21. RESPONSIVE — SMALL MOBILE
+   21. RESPONSIVE â€” SMALL MOBILE
 ========================================================= */
 
 @media (max-width: 479.98px) {

@@ -1,4 +1,4 @@
-package com.fundaxis.controller;
+package com.fundaxis.controller.admin;
 
 import com.fundaxis.entity.Contribution;
 import com.fundaxis.service.ContributionService;
@@ -8,27 +8,86 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import com.fundaxis.exception.DuplicateContributionException;
+import com.fundaxis.exception.EmployeeNotFoundException;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.time.YearMonth;
 import java.util.List;
+import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.time.ZoneId;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
-import java.util.List;
 
 // Handles contribution management for administrators only.
 @Controller
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminContributionController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminContributionController.class);
+    private static final ZoneId BANK_ZONE = ZoneId.of("Asia/Dhaka");
+
+    /** Form binding only; internal employee database IDs are never accepted. */
+    public static class BatchContributionForm {
+        @NotNull(message = "Select a contribution month.")
+        private LocalDate contributionMonth;
+
+        @NotEmpty(message = "Add at least one employee row.")
+        @Size(max = 50, message = "A batch can contain at most 50 employee rows.")
+        @Valid
+        private List<BatchContributionEntryForm> entries = new ArrayList<>();
+
+        public LocalDate getContributionMonth() { return contributionMonth; }
+        public void setContributionMonth(LocalDate contributionMonth) { this.contributionMonth = contributionMonth; }
+        public List<BatchContributionEntryForm> getEntries() { return entries; }
+        public void setEntries(List<BatchContributionEntryForm> entries) { this.entries = entries; }
+    }
+
+    public static class BatchContributionEntryForm {
+        @NotBlank(message = "Employee ID is required.")
+        @Size(max = 20, message = "Employee ID is too long.")
+        private String employeeId;
+
+        @NotNull(message = "Contribution amount is required.")
+        @DecimalMin(value = "0.01", message = "Amount must be greater than zero.")
+        @Digits(integer = 18, fraction = 2, message = "Amount can have at most two decimal places.")
+        private BigDecimal contributionAmount;
+
+        @jakarta.validation.constraints.DecimalMin(value = "0.00", message = "Share Value cannot be negative.")
+        @Digits(integer = 18, fraction = 2, message = "Share Value can have at most two decimal places.")
+        private BigDecimal shareValue;
+
+        @Size(max = 500, message = "Remarks must be 500 characters or fewer.")
+        private String remarks;
+
+        private com.fundaxis.entity.ContributionPayment.PaymentMethod intendedCollectionMethod;
+
+        public String getEmployeeId() { return employeeId; }
+        public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
+        public BigDecimal getContributionAmount() { return contributionAmount; }
+        public void setContributionAmount(BigDecimal contributionAmount) { this.contributionAmount = contributionAmount; }
+        public BigDecimal getShareValue() { return shareValue; }
+        public void setShareValue(BigDecimal shareValue) { this.shareValue = shareValue; }
+        public String getRemarks() { return remarks; }
+        public void setRemarks(String remarks) { this.remarks = remarks; }
+        public com.fundaxis.entity.ContributionPayment.PaymentMethod getIntendedCollectionMethod() { return intendedCollectionMethod; }
+        public void setIntendedCollectionMethod(com.fundaxis.entity.ContributionPayment.PaymentMethod intendedCollectionMethod) { this.intendedCollectionMethod = intendedCollectionMethod; }
+    }
 
     // ==================== Constructor Dependency Injection ==================== //
 
@@ -40,7 +99,7 @@ public class AdminContributionController {
         this.contributionService = contributionService;
     }
 
-    // ==================== Contribution Management List ==================== //
+    ///==================== Contribution Management List ====================///
 
     // Displays all contributions to the admin management page.
     @GetMapping("/admin/contributions")
@@ -95,7 +154,7 @@ public class AdminContributionController {
         model.addAttribute("canceledContributions", canceledContributions);
 
         // Return the Thymeleaf template for the admin contributions page.
-        return "admin/contributions";
+        return "redirect:/admin/contribution-workspace";
     }
 
 
@@ -104,7 +163,11 @@ public class AdminContributionController {
 
     // Displays the form for creating a new contribution record.
     @GetMapping("/admin/contributions/new")
-    public String showAddContributionForm(Model model) {
+    public String showAddContributionForm(
+            @RequestParam(required = false) String employeeId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            Model model) {
 
         // Create an empty Contribution object to bind form input fields.
         Contribution contribution = new Contribution();
@@ -114,9 +177,85 @@ public class AdminContributionController {
 
         // Set edit mode to false because this is a new contribution.
         model.addAttribute("editMode", false);
+        model.addAttribute("prefillEmployeeId", employeeId == null ? "" : employeeId.trim());
+        model.addAttribute("prefillYear", year);
+        model.addAttribute("prefillMonth", month);
 
         // Return the Thymeleaf template for the contribution form.
         return "admin/contribution-form";
+    }
+
+    /** Saves a reviewed multi-employee batch atomically; no payment is recorded. */
+    @PostMapping("/admin/contributions/bulk")
+    public String createContributionBatch(
+            @Valid @ModelAttribute("bulkContributionForm") BatchContributionForm form,
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        if (bindingResult.hasErrors()) {
+            String message = bindingResult.getFieldErrors().stream()
+                    .map(error -> error.getDefaultMessage() == null
+                            ? "Review the contribution batch fields."
+                            : error.getDefaultMessage())
+                    .findFirst()
+                    .orElse("Review the contribution batch fields.");
+            model.addAttribute("errorMessage", message);
+            populateBatchFormModel(form, model);
+            return "admin/contribution-form";
+        }
+
+        try {
+            List<ContributionService.BatchContributionInput> entries = form.getEntries().stream()
+                    .map(entry -> new ContributionService.BatchContributionInput(
+                            entry.getEmployeeId(), entry.getContributionAmount(), entry.getIntendedCollectionMethod(),
+                            entry.getShareValue(), entry.getRemarks()))
+                    .toList();
+            int savedCount = contributionService.createContributionBatch(
+                    form.getContributionMonth(), entries);
+
+            redirectAttributes.addFlashAttribute("successMessage",
+                    savedCount + (savedCount == 1
+                            ? " pending contribution created. No payment was recorded."
+                            : " pending contributions created. No payments were recorded."));
+            redirectAttributes.addAttribute("tab", "member-operations");
+            redirectAttributes.addAttribute("year", form.getContributionMonth().getYear());
+            redirectAttributes.addAttribute("month", form.getContributionMonth().getMonthValue());
+            if (savedCount == 1) {
+                // Use the already submitted business ID; do not dereference a lazy
+                // Employee relationship after the service transaction has closed.
+                redirectAttributes.addAttribute("employeeId",
+                        form.getEntries().get(0).getEmployeeId().trim());
+            }
+            return "redirect:/admin/contribution-workspace";
+        } catch (DuplicateContributionException | EmployeeNotFoundException
+                 | IllegalArgumentException | IllegalStateException exception) {
+            model.addAttribute("errorMessage", exception.getMessage());
+            populateBatchFormModel(form, model);
+            return "admin/contribution-form";
+        } catch (Exception exception) {
+            // Keep the exception in server logs while showing a safe in-page error.
+            log.error("Contribution batch save failed for month {} ({} rows)",
+                    form.getContributionMonth(),
+                    form.getEntries() == null ? 0 : form.getEntries().size(), exception);
+            model.addAttribute("errorMessage",
+                    "The batch could not be saved. No success was confirmed. Review the entries and try again.");
+            populateBatchFormModel(form, model);
+            return "admin/contribution-form";
+        }
+    }
+
+    private static void populateBatchFormModel(BatchContributionForm form, Model model) {
+        LocalDate selectedMonth = form == null ? null : form.getContributionMonth();
+        if (selectedMonth == null) selectedMonth = LocalDate.now(BANK_ZONE).withDayOfMonth(1);
+        String firstEmployeeId = form != null && form.getEntries() != null
+                && !form.getEntries().isEmpty() && form.getEntries().get(0) != null
+                ? form.getEntries().get(0).getEmployeeId() : "";
+        model.addAttribute("contribution", new Contribution());
+        model.addAttribute("editMode", false);
+        model.addAttribute("prefillEmployeeId", firstEmployeeId == null ? "" : firstEmployeeId);
+        model.addAttribute("prefillYear", selectedMonth.getYear());
+        model.addAttribute("prefillMonth", selectedMonth.getMonthValue());
     }
 
 

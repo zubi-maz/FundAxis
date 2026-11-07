@@ -34,7 +34,7 @@ public class LoanDisbursementService {
     @Transactional
     public LoanDisbursement createDisbursement(Long loanId, LoanDisbursement disbursement) {
 
-        Loan loan = findLoanById(loanId);
+        Loan loan = findLoanByIdForUpdate(loanId);
 
         // Only approved loans can enter the disbursement workflow
         if (loan.getLoanStatus() != Loan.LoanStatus.APPROVED) {
@@ -228,7 +228,7 @@ public class LoanDisbursementService {
     @Transactional
     public LoanDisbursement startProcessing(Long id) {
 
-        LoanDisbursement disbursement = findDisbursementById(id);
+        LoanDisbursement disbursement = findDisbursementByIdForUpdate(id);
 
         // Only PENDING disbursements can start processing
         if (disbursement.getDisbursementStatus() != LoanDisbursement.DisbursementStatus.PENDING) {
@@ -255,7 +255,7 @@ public class LoanDisbursementService {
     @Transactional
     public LoanDisbursement completeDisbursement(Long id, String processedBy, String referenceNumber) {
 
-        LoanDisbursement disbursement = findDisbursementById(id);
+        LoanDisbursement disbursement = findDisbursementByIdForUpdate(id);
 
         // Only PROCESSING disbursements can be completed
         if (disbursement.getDisbursementStatus() != LoanDisbursement.DisbursementStatus.PROCESSING) {
@@ -334,7 +334,7 @@ public class LoanDisbursementService {
     @Transactional
     public LoanDisbursement failDisbursement(Long id, String failureReason) {
 
-        LoanDisbursement disbursement = findDisbursementById(id);
+        LoanDisbursement disbursement = findDisbursementByIdForUpdate(id);
 
         // Only PROCESSING disbursements can fail
         if (disbursement.getDisbursementStatus() != LoanDisbursement.DisbursementStatus.PROCESSING) {
@@ -366,7 +366,7 @@ public class LoanDisbursementService {
     @Transactional
     public LoanDisbursement cancelDisbursement(Long id, String cancellationReason) {
 
-        LoanDisbursement disbursement = findDisbursementById(id);
+        LoanDisbursement disbursement = findDisbursementByIdForUpdate(id);
 
         // Only PENDING disbursements can be cancelled
         if (disbursement.getDisbursementStatus() != LoanDisbursement.DisbursementStatus.PENDING) {
@@ -403,12 +403,29 @@ public class LoanDisbursementService {
 
     }
 
+    private Loan findLoanByIdForUpdate(Long loanId) {
+        return loanRepository.findByIdForUpdate(loanId)
+                .orElseThrow(() -> new LoanNotFoundException(
+                        "Loan with database ID: " + loanId + " does not exist"));
+    }
+
 
     ///---------- Find A Disbursement Or Throw A Disbursement Not-Found Exception ----------
     private LoanDisbursement findDisbursementById(Long id) {
 
         return loanDisbursementRepository.findById(id).orElseThrow(() -> new LoanDisbursementNotFoundException("Loan disbursement with ID: " + id + " does not exist"));
 
+    }
+
+    /** Always lock the parent loan first so create/complete operations serialize
+     * their approved-amount check, then lock and re-read the workflow row. */
+    private LoanDisbursement findDisbursementByIdForUpdate(Long id) {
+        LoanDisbursement observed = findDisbursementById(id);
+        Long loanId = observed.getLoan().getId();
+        findLoanByIdForUpdate(loanId);
+        return loanDisbursementRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new LoanDisbursementNotFoundException(
+                        "Loan disbursement with ID: " + id + " does not exist"));
     }
 
 

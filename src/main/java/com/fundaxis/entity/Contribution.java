@@ -60,6 +60,14 @@ public class Contribution {
     @Column(name = "contribution_amount", nullable = false, precision = 20, scale = 2)
     private BigDecimal contributionAmount;
 
+    /** Optional informational value recorded for this monthly contribution row. */
+    @Column(name = "share_value", precision = 20, scale = 2)
+    private BigDecimal shareValue;
+
+    /** Optional administrator remark; distinct from payment method and receipt notes. */
+    @Column(name = "remarks", length = 500)
+    private String remarks;
+
     // Contribution Month
     // Example: 01/09/2026 represents September 2026
     // One employee can have only one contribution per month
@@ -86,6 +94,11 @@ public class Contribution {
     @Enumerated(EnumType.STRING)
     @Column(name = "contribution_status", nullable = false, length = 20)
     private ContributionStatus contributionStatus = ContributionStatus.PENDING;
+
+    /** Optional planned collection channel; never evidence of a received payment. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "intended_collection_method", length = 25)
+    private ContributionPayment.PaymentMethod intendedCollectionMethod;
 
     /// ---------- Audit Information ----------
 

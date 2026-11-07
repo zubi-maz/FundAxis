@@ -7,6 +7,7 @@
 
 <!-- Head holds metadata and stylesheets -->
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <!-- Use UTF-8 character encoding -->
     <meta charset="UTF-8">
     <!-- Make the page responsive on mobile -->
@@ -36,9 +37,6 @@
     <link th:href="@{/css/loan-extensions.css}"
           rel="stylesheet">
 
-    <!-- Load loan extension styles (singular filename, used by the list page) -->
-    <link th:href="@{/css/loan-extension.css}"
-          rel="stylesheet">
 </head>
 
 <!-- Body with the shared FundAxis class -->
@@ -64,7 +62,7 @@
                class="fa-brand-link"
                aria-label="FundAxis Admin dashboard home">
                 <!-- Logo image -->
-                <img th:src="@{/images/fundaxis-logo.png}"
+                <img th:src="@{/images/favicon.ico}"
                      alt="FundAxis"
                      class="fa-brand-logo">
                 <!-- Brand name text -->
@@ -118,13 +116,14 @@
                 <!-- Contributions item -->
                 <li>
                     <!-- Link to contributions -->
-                    <a th:href="@{/admin/contributions}" class="fa-nav-link">
+                    <a th:href="@{/admin/contribution-workspace}" class="fa-nav-link">
                         <!-- Piggy bank icon -->
                         <i class="bi bi-piggy-bank" aria-hidden="true"></i>
                         <!-- Link label -->
                         <span>Contributions</span>
                     </a>
                 </li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
                 <!-- Loans item -->
                 <li>
                     <!-- Link to loans -->

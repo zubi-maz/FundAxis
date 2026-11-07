@@ -8,8 +8,8 @@ import lombok.Setter;
 @Setter
 public class LoanDisbursementCompleteRequest {
 
-    // Employee/admin who completed the disbursement
-    @NotBlank(message = "Processed by is required")
+    // Deprecated compatibility input. The API ignores this value and takes the
+    // processor identity from the authenticated server-side principal.
     private String processedBy;
 
 

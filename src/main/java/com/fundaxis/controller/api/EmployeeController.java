@@ -1,31 +1,41 @@
-package com.fundaxis.controller;
+package com.fundaxis.controller.api;
 
+import com.fundaxis.controller.admin.AdminEmployeeController;
 import com.fundaxis.dto.DeactivateRequest;
 import com.fundaxis.entity.Employee;
 import com.fundaxis.service.EmployeeService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import java.time.LocalDate;
 import java.util.List;
 
+///===========================================================================================///
+///============================== @RestController for JSON APIs (REST API) ==============================///
+///===========================================================================================///
 @RestController
 @RequestMapping("/api/employees")
 public class EmployeeController {
 
 
+    private static final Logger log = LoggerFactory.getLogger(AdminEmployeeController.class);
+
+
     private final EmployeeService employeeService;
 
-    // Inject EmployeeService into the Service
+    // Inject EmployeeService into the Controller
     public EmployeeController(EmployeeService employeeService){
         this.employeeService = employeeService;
     }
 
     ///==================== Deactivate an Employee ====================///
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
     @PatchMapping("/{employeeId}/deactivate")
     public ResponseEntity<Employee> deactivateEmployee(@PathVariable String employeeId, @Valid @RequestBody DeactivateRequest deactivateRequest){
 
@@ -37,7 +47,7 @@ public class EmployeeController {
 
     ///==================== Activate an Employee ====================///
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
     @PatchMapping("/{employeeId}/activate")
     public ResponseEntity<Employee> activateEmployee(@PathVariable String employeeId){
 
@@ -85,10 +95,36 @@ public class EmployeeController {
     }
 
 
+    ///---------- Get Employees By Designation ----------
+    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
+    @GetMapping("/designation/{designation}")
+    public ResponseEntity<List<Employee>> getEmployeesByDesignation(@PathVariable Employee.EmployeeDesignation employeeDesignation) {
+        return ResponseEntity.ok(employeeService.getEmployeesByDesignation(employeeDesignation));
+    }
+
+
+    ///---------- Get Employees By Fund Join Date ----------
+    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
+    @GetMapping("/join-date")
+    public ResponseEntity<List<Employee>> getEmployeesByJoinDate(@RequestParam @org.springframework.format.annotation.DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate fundJoinDate) {
+        return ResponseEntity.ok(employeeService.getEmployeesByJoinDate(fundJoinDate));
+    }
+
+
+    ///---------- Get Employees By Fund Join Date Range ----------
+    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
+    @GetMapping("/join-date-range")
+    public ResponseEntity<List<Employee>> getEmployeesByJoinDateRange(
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate startDate,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate endDate) {
+        return ResponseEntity.ok(employeeService.getEmployeesByJoinDateRange(startDate, endDate));
+    }
+
+
     ///==================== Create ====================///
 
     // Create a new Employee
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
     @PostMapping
     public ResponseEntity<Employee> createEmployee(@Valid @RequestBody Employee employee){
 
@@ -127,7 +163,7 @@ public class EmployeeController {
     ///==================== Update ====================///
 
     // Update an existing employee with -> employeeId
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
     @PutMapping("/{employeeId}")
     public ResponseEntity<Employee> updateEmployeeByEmployeeId(@PathVariable String employeeId, @Valid @RequestBody Employee employee){
 

@@ -1,0 +1,892 @@
+﻿/* ==========================================================
+   FundAxis - Admin bundle (merged)
+   = dashboard.css (layout foundation, :root variables)
+   + admin-employees.css (buttons, forms, toolbar, modals,
+     pagination, row actions)
+   + contribution bulk-form additions.
+   Loaded FIRST and ONLY on every admin page; later files may
+   override, nothing here depends on anything else.
+   ========================================================== */
+
+/* ==========================================================================
+   1. DESIGN TOKENS
+   ========================================================================== */
+:root {
+    --fa-app-background: #E5ECE8;
+    --fa-card-background: #F0F4F1;
+    --fa-table-background: #F0F4F1;
+    --fa-table-header: #E2EAE5;
+    --fa-input-background: #F3F6F3;
+    --fa-modal-background: #EDF2EE;
+    --fa-text-primary: #172B26;
+    --fa-text-secondary: #52645D;
+    --fa-green: #024731;
+    --fa-green-dark: #013A29;
+    --fa-text: var(--fa-text-primary);
+    --fa-muted: var(--fa-text-secondary);
+    --fa-soft: #EAF1ED;
+    --fa-bg: var(--fa-app-background);
+    --fa-border: #CCD9D1;
+    --fa-white: var(--fa-card-background);
+    --fa-success: #16794A;
+    --fa-warning: #9A6700;
+    --fa-danger: #B42318;
+
+    --fa-sidebar-width: 268px;
+    --fa-topbar-height: 68px;
+    --fa-radius: 14px;
+    --fa-shadow: 0 1px 2px rgba(2, 71, 49, 0.05), 0 4px 14px rgba(2, 71, 49, 0.06);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+.fa-body {
+    margin: 0;
+    background: var(--fa-bg);
+    color: var(--fa-text);
+    --bs-body-bg: var(--fa-app-background);
+    --bs-body-color: var(--fa-text-primary);
+    --bs-secondary-color: var(--fa-text-secondary);
+    --bs-border-color: var(--fa-border);
+    --bs-white-rgb: 240, 244, 241;
+    --bs-light-rgb: 226, 234, 229;
+    --bs-card-bg: var(--fa-card-background);
+    --bs-modal-bg: var(--fa-modal-background);
+    --bs-offcanvas-bg: var(--fa-modal-background);
+    --bs-table-bg: var(--fa-table-background);
+    --bs-table-color: var(--fa-text-primary);
+    --bs-table-border-color: var(--fa-border);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Shared low-glare surfaces for the authenticated application. */
+.fa-body .fa-content .card,
+.fa-body .fa-content .dropdown-menu,
+.fa-body .fa-content .list-group-item {
+    background-color: var(--fa-card-background);
+    border-color: var(--fa-border);
+    color: var(--fa-text-primary);
+}
+.fa-body .fa-content .modal-content,
+.fa-body .fa-content .offcanvas {
+    background-color: var(--fa-modal-background);
+    border-color: var(--fa-border);
+    color: var(--fa-text-primary);
+}
+.fa-body .fa-content .modal-header,
+.fa-body .fa-content .modal-footer,
+.fa-body .fa-content .offcanvas-header,
+.fa-body .fa-content .offcanvas-footer { border-color: var(--fa-border); }
+.fa-body .fa-content .form-control,
+.fa-body .fa-content .form-select,
+.fa-body .fa-content textarea,
+.fa-body .fa-content input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+.fa-body .fa-content select {
+    background-color: var(--fa-input-background);
+    border-color: var(--fa-border);
+    color: var(--fa-text-primary);
+}
+.fa-body .fa-content .bg-light,
+.fa-body .fa-content .text-bg-light { background-color: var(--fa-table-header) !important; }
+.fa-body .fa-content .text-bg-light { color: var(--fa-text-primary) !important; }
+.fa-body .fa-content .border-light { border-color: var(--fa-border) !important; }
+.fa-body .fa-content .table {
+    --bs-table-bg: var(--fa-table-background);
+    --bs-table-color: var(--fa-text-primary);
+    --bs-table-border-color: var(--fa-border);
+}
+.fa-body .fa-content .table thead th {
+    background-color: var(--fa-table-header);
+    color: var(--fa-text-primary);
+}
+
+body.fa-no-scroll { overflow: hidden; }
+
+/* ==========================================================================
+   2. ACCESSIBILITY
+   ========================================================================== */
+.fa-skip-link {
+    position: absolute;
+    left: 12px;
+    top: -60px;
+    z-index: 2000;
+    background: var(--fa-green);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+}
+.fa-skip-link:focus { top: 12px; color: #fff; }
+
+.fa-body a:focus-visible,
+.fa-body button:focus-visible,
+.fa-body .dropdown-item:focus-visible {
+    outline: 3px solid #5FB894;
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.fa-content:focus { outline: none; }
+
+/* ==========================================================================
+   3. SHELL LAYOUT
+   ========================================================================== */
+.fa-shell { min-height: 100vh; }
+
+.fa-main-wrap {
+    margin-left: var(--fa-sidebar-width);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* ==========================================================================
+   4. SIDEBAR
+   ========================================================================== */
+.fa-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--fa-sidebar-width);
+    background: var(--fa-green);
+    color: rgba(255, 255, 255, 0.82);
+    display: flex;
+    flex-direction: column;
+    z-index: 1040;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.fa-sidebar-brand {
+    height: var(--fa-topbar-height);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fa-brand-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+}
+.fa-brand-link:hover { color: #fff; }
+
+.fa-brand-logo {
+    height: 34px;
+    width: auto;
+    max-width: 44px;
+    object-fit: contain;
+}
+
+.fa-brand-text {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.fa-sidebar-close {
+    display: none;
+    background: transparent;
+    border: 0;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+.fa-sidebar-close:hover { background: rgba(255, 255, 255, 0.12); }
+
+.fa-sidebar-nav { padding: 12px 12px 24px; flex: 1; }
+
+/* Section headings (Employee & Fund, Loan Management, etc.) */
+.fa-nav-heading {
+    margin: 18px 12px 7px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.58);
+}
+
+/* First heading in the sidebar â€” no top border */
+.fa-sidebar-nav > .fa-nav-heading:first-child,
+.fa-sidebar-nav > div > .fa-nav-heading:first-child {
+    margin-top: 10px;
+    padding-top: 0;
+    border-top: none;
+}
+
+.fa-nav-list { list-style: none; margin: 0; padding: 0; }
+.fa-nav-list li { margin-bottom: 2px; }
+
+.fa-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.82);
+    text-decoration: none;
+    font-size: 0.93rem;
+    font-weight: 500;
+    line-height: 1.3;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.fa-nav-link i { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+.fa-nav-link span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.fa-sidebar { overflow-x: hidden; }
+
+.fa-nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.fa-nav-link.active {
+    background: var(--fa-soft);
+    color: var(--fa-green);
+    font-weight: 600;
+}
+
+.fa-sidebar a:focus-visible,
+.fa-sidebar button:focus-visible {
+    outline: 3px solid #A9E0C6;
+    outline-offset: 1px;
+}
+
+.fa-logout-form { margin: 0; }
+.fa-nav-button {
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* ---------- Overlay (mobile) ---------- */
+.fa-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(1, 58, 41, 0.55);
+    z-index: 1035;
+}
+.fa-overlay[hidden] { display: none; }
+
+/* ==========================================================================
+   5. TOPBAR
+   ========================================================================== */
+.fa-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    height: var(--fa-topbar-height);
+    background: var(--fa-white);
+    border-bottom: 1px solid var(--fa-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+.fa-topbar-left,
+.fa-topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.fa-topbar-title {
+    font-weight: 700;
+    color: var(--fa-green);
+    font-size: 1.05rem;
+}
+.fa-topbar-sub {
+    font-weight: 500;
+    color: var(--fa-muted);
+    font-size: 0.9rem;
+    margin-left: 6px;
+}
+
+.fa-menu-toggle,
+.fa-icon-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--fa-border);
+    border-radius: 10px;
+    color: var(--fa-green);
+    font-size: 1.15rem;
+    transition: background-color 0.15s ease;
+}
+.fa-menu-toggle { display: none; }
+.fa-menu-toggle:hover,
+.fa-icon-btn:hover { background: var(--fa-soft); }
+
+/* ==========================================================================
+   6. PROFILE DROPDOWN
+   ========================================================================== */
+.fa-profile-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 1px solid var(--fa-border);
+    border-radius: 12px;
+    padding: 5px 12px 5px 6px;
+    color: var(--fa-text);
+    transition: background-color 0.15s ease;
+}
+.fa-profile-btn:hover,
+.fa-profile-btn.show { background: var(--fa-soft); }
+.fa-profile-btn::after { margin-left: 2px; color: var(--fa-muted); }
+
+.fa-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--fa-green);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.fa-profile-meta { align-items: center; gap: 8px; }
+.fa-profile-name { font-weight: 600; font-size: 0.92rem; }
+
+.fa-dropdown {
+    min-width: 240px;
+    border: 1px solid var(--fa-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(2, 71, 49, 0.14);
+    padding: 6px;
+    margin-top: 8px !important;
+}
+.fa-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+}
+.fa-dropdown .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    color: var(--fa-text);
+}
+.fa-dropdown .dropdown-item:hover,
+.fa-dropdown .dropdown-item:focus {
+    background: var(--fa-soft);
+    color: var(--fa-green);
+}
+.fa-dropdown .fa-dropdown-danger { color: var(--fa-danger); }
+.fa-dropdown .fa-dropdown-danger:hover { background: #FDF1EF; color: var(--fa-danger); }
+.fa-dropdown .dropdown-divider { border-color: var(--fa-border); margin: 4px 0; }
+
+/* ==========================================================================
+   7. ROLE BADGES
+   ========================================================================== */
+.fa-role-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.fa-role-admin { background: var(--fa-green); color: #fff; }
+.fa-role-it    { background: #E4EFE9; color: var(--fa-green-dark); border: 1px solid #C9DDD3; }
+.fa-role-user  { background: var(--fa-soft); color: var(--fa-muted); border: 1px solid var(--fa-border); }
+
+/* ==========================================================================
+   8. MAIN CONTENT / PAGE HEADER / BREADCRUMB
+   ========================================================================== */
+.fa-content {
+    flex: 1;
+    padding: 28px 32px 32px;
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.fa-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.fa-page-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--fa-text);
+    margin: 0 0 4px;
+}
+
+/* Grey subtitle under the page title. */
+.fa-page-subtitle { margin: 4px 0 8px; color: var(--fa-muted); font-size: 0.93rem; max-width: 640px; }
+
+.fa-breadcrumb {
+    margin: 0;
+    font-size: 0.85rem;
+    --bs-breadcrumb-divider-color: var(--fa-muted);
+    --bs-breadcrumb-item-active-color: var(--fa-muted);
+}
+.fa-breadcrumb a { color: var(--fa-green); text-decoration: none; font-weight: 500; }
+.fa-breadcrumb a:hover { text-decoration: underline; }
+
+/* ==========================================================================
+   9. ALERTS
+   ========================================================================== */
+.fa-alerts:empty { display: none; }
+.fa-alerts { margin-bottom: 16px; }
+
+.fa-alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 12px;
+    border-width: 1px;
+    font-size: 0.93rem;
+    padding: 12px 44px 12px 16px;
+}
+.fa-alert i { font-size: 1.1rem; flex-shrink: 0; }
+.fa-alert .btn-close { padding: 16px; }
+.alert-success.fa-alert { background: #EAF6F0; border-color: #BFE0CF; color: var(--fa-success); }
+.alert-danger.fa-alert  { background: #FDF1EF; border-color: #F4C7C1; color: var(--fa-danger); }
+.alert-warning.fa-alert { background: #FFF7E3; border-color: #F0DCA0; color: var(--fa-warning); }
+.alert-info.fa-alert    { background: var(--fa-soft); border-color: var(--fa-border); color: var(--fa-green-dark); }
+
+/* ==========================================================================
+   10. WELCOME BAND
+   ========================================================================== */
+.fa-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: var(--fa-white);
+    border: 1px solid var(--fa-border);
+    border-left: 4px solid var(--fa-green);
+    border-radius: var(--fa-radius);
+    padding: 18px 22px;
+    margin-bottom: 20px;
+    box-shadow: var(--fa-shadow);
+}
+.fa-welcome-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 4px; }
+.fa-welcome-text { margin: 0; color: var(--fa-muted); font-size: 0.93rem; }
+.fa-welcome-role { display: flex; align-items: center; gap: 10px; }
+.fa-welcome-role-label { font-size: 0.85rem; color: var(--fa-muted); }
+
+/* ==========================================================================
+   11. CARDS
+   ========================================================================== */
+.fa-card {
+    background: var(--fa-white);
+    border: 1px solid var(--fa-border);
+    border-radius: var(--fa-radius);
+    box-shadow: var(--fa-shadow);
+    overflow: hidden;
+}
+.fa-card-header {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--fa-border);
+}
+.fa-card-title { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.fa-card-note {
+    margin: 0;
+    padding: 12px 22px;
+    font-size: 0.82rem;
+    color: var(--fa-muted);
+    border-top: 1px solid var(--fa-border);
+    background: var(--fa-soft);
+}
+
+/* ==========================================================================
+   12. SUMMARY / STAT CARDS
+   ========================================================================== */
+.fa-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 22px;
+    height: 100%;
+}
+.fa-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--fa-soft);
+    color: var(--fa-green);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+.fa-stat-label { margin: 0; font-size: 0.85rem; color: var(--fa-muted); font-weight: 500; }
+.fa-stat-value { margin: 2px 0 0; font-size: 1.7rem; font-weight: 700; line-height: 1.15; color: var(--fa-text); }
+
+/* ==========================================================================
+   13. TABLES
+   ========================================================================== */
+.fa-table {
+    --bs-table-bg: transparent;
+    margin: 0;
+    font-size: 0.92rem;
+}
+.fa-table thead th {
+    background: var(--fa-soft);
+    color: var(--fa-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--fa-border);
+    padding: 12px 22px;
+    white-space: nowrap;
+}
+.fa-table tbody td {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--fa-border);
+    color: var(--fa-text);
+}
+.fa-table tbody tr:last-child td { border-bottom: 0; }
+.fa-table tbody tr:hover td { background: #FAFDFB; }
+
+/* Bar under data tables (record counts, bulk actions, pagination). */
+.fa-table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 22px;
+    border-top: 1px solid var(--fa-border);
+    background: var(--fa-soft);
+    color: var(--fa-muted);
+    font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   14. STATUS BADGES  (single source of truth â€” was duplicated in two
+       files with DIFFERENT danger colors before the merge; the values
+       below match the alert palette)
+   ========================================================================== */
+.fa-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.fa-status-success { background: #EAF6F0; color: var(--fa-success); }
+.fa-status-warning { background: #FFF7E3; color: var(--fa-warning); }
+.fa-status-danger  { background: #FDF1EF; color: var(--fa-danger); }
+.fa-status-neutral { background: var(--fa-soft); color: var(--fa-muted); }
+.fa-status-info    { background: #E0F2FE; color: #075985; }
+
+/* ==========================================================================
+   15. QUICK ACTIONS
+   ========================================================================== */
+.fa-quick-list { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 18px; }
+.fa-quick-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--fa-border);
+    border-radius: 10px;
+    background: var(--fa-white);
+    color: var(--fa-text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.93rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.fa-quick-link i { color: var(--fa-green); font-size: 1.1rem; }
+.fa-quick-link:hover {
+    background: var(--fa-soft);
+    border-color: #BCD3C8;
+    color: var(--fa-green);
+}
+
+/* ==========================================================================
+   16. FOOTER
+   ========================================================================== */
+.fa-footer {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    padding: 16px 32px;
+    border-top: 1px solid var(--fa-border);
+    background: var(--fa-white);
+    color: var(--fa-muted);
+    font-size: 0.82rem;
+}
+
+/* ==========================================================================
+   17. BUTTONS (brand variants on top of Bootstrap)
+   ========================================================================== */
+/* Base button (also used for <a> styled as a button). */
+.fa-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* Visible keyboard-focus ring in brand green. */
+.fa-btn:focus-visible { outline: 3px solid rgba(2, 71, 49, 0.35); outline-offset: 2px; }
+
+/* Disabled state, shared by the .disabled class (used by JS) and :disabled. */
+.fa-btn:disabled,
+.fa-btn.disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+
+/* Smaller variant for table/toolbar buttons. */
+.fa-btn-sm { padding: 6px 12px; font-size: 0.83rem; border-radius: 8px; }
+
+/* Solid brand-green button (primary actions: Save, Upload, Review). */
+.fa-btn-primary { background: var(--fa-green); border-color: var(--fa-green); color: #fff; }
+.fa-btn-primary:hover { background: var(--fa-green-dark); border-color: var(--fa-green-dark); color: #fff; }
+
+/* Outlined neutral button (secondary actions: Cancel, Add row). */
+.fa-btn-outline { background: var(--fa-white); border-color: var(--fa-border); color: var(--fa-green); }
+.fa-btn-outline:hover { background: var(--fa-soft); border-color: #BCD3C8; color: var(--fa-green); }
+
+/* Solid red button (destructive confirmations inside modals). */
+.fa-btn-danger { background: var(--fa-danger); border-color: var(--fa-danger); color: #fff; }
+.fa-btn-danger:hover { background: #912018; border-color: #912018; color: #fff; }
+
+/* Outlined red button (destructive but non-final actions, e.g. Remove row). */
+.fa-btn-outline-danger { background: var(--fa-white); border-color: #F4C7C1; color: var(--fa-danger); }
+.fa-btn-outline-danger:hover { background: #FDF1EF; border-color: var(--fa-danger); color: var(--fa-danger); }
+
+/* ==========================================================================
+   18. FORM CONTROLS
+   ========================================================================== */
+/* Field labels (full size and small). */
+.fa-label { margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: var(--fa-text); }
+.fa-label-sm { font-size: 0.8rem; font-weight: 700; color: var(--fa-muted); }
+
+/* Inputs and selects: rounded corners + brand-green focus ring.
+   (Bootstrap provides the base .form-control styles; we only override the look.) */
+.fa-input.form-control,
+.fa-input.form-select {
+    border: 1px solid var(--fa-border);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 0.93rem;
+    color: var(--fa-text);
+}
+.fa-input.form-control-sm { padding: 7px 10px; font-size: 0.88rem; }
+
+.fa-input.form-control:focus,
+.fa-input.form-select:focus {
+    border-color: var(--fa-green);
+    box-shadow: 0 0 0 3px rgba(2, 71, 49, 0.15);
+}
+
+/* ==========================================================================
+   19. SEARCH TOOLBAR / EXPORT CARD
+   ========================================================================== */
+/* Search/filter toolbar inside a card. */
+.fa-toolbar { padding: 18px 22px; }
+
+/* Soft-green card that holds the "Export Excel" action. */
+.fa-export-card {
+    padding: 16px 22px;
+    background: var(--fa-soft);
+    border: 1px solid var(--fa-border);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+}
+.fa-export-card .fa-btn { width: 100%; }
+
+/* ==========================================================================
+   20. TABLE EXTRAS / ROW ACTIONS
+   ========================================================================== */
+/* Employee ID cells are emphasized and never wrapped. */
+.fa-table .fa-cell-id { font-weight: 600; white-space: nowrap; }
+
+/* Fixed narrow column for the SL number. */
+.fa-table .fa-col-sl { width: 56px; white-space: nowrap; color: var(--fa-muted); }
+
+.fa-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.fa-row-actions form { margin: 0; }              /* neutralize Bootstrap form margins */
+.fa-row-actions .fa-btn { white-space: nowrap; }
+
+/* ==========================================================================
+   21. EMPLOYEE / BULK FORM ROWS (Add Employees & Add Contributions pages)
+   ========================================================================== */
+
+/* The per-row action buttons (Clear + Remove / Remove + Lookup) share the
+   last narrow column (col-md-1). Give every button a small left gap,
+   except the first one. */
+.fa-employee-row .col-md-1.text-md-end .btn { margin-left: 4px; }
+.fa-employee-row .col-md-1.text-md-end .btn:first-child { margin-left: 0; }
+
+/* Employee lookup result line under the ID input (name / designation / fund status). */
+.fa-lookup-info { min-height: 1.3em; color: var(--fa-muted); }
+.fa-lookup-info .fa-status { font-size: 0.7rem; padding: 2px 8px; }
+
+/* Batch summary footer on the bulk contribution form: stays visible while
+   scrolling a long list of rows. */
+.fa-bulk-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: var(--fa-soft);
+    border-top: 1px solid var(--fa-border);
+}
+.fa-bulk-footer .fa-bulk-stat { font-weight: 700; color: var(--fa-text); }
+
+/* ==========================================================================
+   22. PAGINATION (Bootstrap overrides in brand green)
+   ========================================================================== */
+.fa-pagination {
+    margin: 0;
+    --bs-pagination-active-bg: var(--fa-green);
+    --bs-pagination-active-border-color: var(--fa-green);
+    --bs-pagination-color: var(--fa-green);
+    --bs-pagination-hover-color: var(--fa-green-dark);
+    --bs-pagination-focus-color: var(--fa-green-dark);
+    --bs-pagination-focus-box-shadow: 0 0 0 3px rgba(2, 71, 49, 0.15);
+}
+
+/* ==========================================================================
+   23. MODALS
+   ========================================================================== */
+.modal-content { border: 1px solid var(--fa-border); border-radius: var(--fa-radius); }
+.modal-header, .modal-footer { border-color: var(--fa-border); }
+.modal-title { font-size: 1.1rem; font-weight: 700; }
+.modal-footer { flex-wrap: wrap; gap: 8px; }
+
+/* Soft info/note box used inside modals and forms (e.g. the EMP- prefix note). */
+.fa-modal-employee {
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    background: var(--fa-soft);
+    border: 1px solid var(--fa-border);
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+.fa-modal-employee dd { overflow-wrap: anywhere; }
+
+/* Review-table inside the batch review modal. */
+.fa-review-table tbody td { vertical-align: middle; }
+
+/* ==========================================================================
+   24. RESPONSIVE
+   ========================================================================== */
+@media (max-width: 991.98px) {
+    .fa-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: none;
+    }
+    .fa-sidebar.is-open {
+        transform: translateX(0);
+        box-shadow: 8px 0 30px rgba(1, 58, 41, 0.3);
+    }
+    .fa-sidebar-close { display: inline-flex; align-items: center; justify-content: center; }
+    .fa-main-wrap { margin-left: 0; }
+    .fa-menu-toggle { display: inline-flex; }
+    .fa-topbar { padding: 0 16px; }
+    .fa-content { padding: 22px 18px 28px; }
+    .fa-footer { padding: 14px 18px; }
+}
+
+@media (max-width: 575.98px) {
+    .fa-page-title { font-size: 1.4rem; }
+    .fa-topbar-title { font-size: 1rem; }
+    .fa-welcome { padding: 16px; }
+    .fa-table thead th,
+    .fa-table tbody td { padding: 12px 16px; }
+    .fa-card-header { padding: 14px 16px; }
+    .fa-card-note { padding: 12px 16px; }
+
+    /* compact paddings for toolbar-type blocks */
+    .fa-toolbar { padding: 16px; }
+    .fa-export-card { padding: 16px; }
+    .fa-table-footer { padding: 12px 16px; }
+    .fa-page-header .fa-btn { width: 100%; }          /* header buttons go full width */
+    .modal-footer .fa-btn { flex: 1 1 auto; }        /* modal buttons share the row */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fa-sidebar,
+    .fa-nav-link,
+    .fa-quick-link { transition: none; }
+}
+
+
+/* Contribution bulk form status */
+
+.fa-bulk-row .fa-row-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    max-width: 100%;
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: #eef2ef;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.fa-bulk-row .fa-row-status[data-status="EMPTY"] {
+    background: #eef2ef;
+    color: #64746c;
+}
+
+.fa-bulk-row .fa-row-status[data-status="CHECKING"] {
+    background: #e7f1ff;
+    color: #175cd3;
+}
+
+.fa-bulk-row .fa-row-status[data-status="READY"] {
+    background: #e5f5eb;
+    color: #02713c;
+}
+
+.fa-bulk-row .fa-row-status[data-status="INVALID"],
+.fa-bulk-row .fa-row-status[data-status="INACTIVE"] {
+    background: #fff0ed;
+    color: #b42318;
+}
+
+.fa-bulk-row .fa-row-status[data-status="DUPLICATE"] {
+    background: #fff3d6;
+    color: #956300;
+}

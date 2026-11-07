@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+<!-- FundAxis withdrawal/profit workspace. Request, approval, share posting and monetary settlement are separate events.
+     Assets are scoped to this module. Profit and monetary rules remain unconfigured; sensitive actions fail closed. -->
+<html
+    lang="en"
+    xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
+    <meta charset="UTF-8">
+
+    <!-- Ask search engines NOT to index this private admin page -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Share Withdrawal &amp; Profit | FundAxis</title>
+
+    <!-- Bootstrap CSS + Bootstrap Icons (loaded from CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- Project CSS files (served from /static/css) -->
+    <link th:href="@{/css/dashboard.css}" rel="stylesheet">
+    <link th:href="@{/css/admin-employees.css}" rel="stylesheet">
+    <link th:href="@{/css/contribution-share.css}" rel="stylesheet">
+    <link th:href="@{/css/share-withdrawal-profit.css}" rel="stylesheet">
+</head>
+<body class="fa-body">
+
+    <!-- Accessibility: lets keyboard users jump straight to the main content -->
+    <a class="fa-skip-link" href="#main-content">Skip to main content</a>
+
+    <!-- Whole page layout: sidebar on the left + main area on the right -->
+    <div class="fa-shell">
+
+        <!-- ================================================================
+             SIDEBAR NAVIGATION
+             (COMMON SHELL - keep identical on all admin pages)
+        ================================================================= -->
+        <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
+
+            <!-- Brand / logo area -->
+            <div class="fa-sidebar-brand">
+                <a
+                    th:href="@{/admin/dashboard}"
+                    class="fa-brand-link"
+                    aria-label="FundAxis Admin dashboard home">
+                    <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
+                    <span class="fa-brand-text">FundAxis</span>
+                </a>
+
+                <!-- Close button (visible on mobile only) -->
+                <button
+                    type="button"
+                    class="fa-sidebar-close"
+                    id="faSidebarClose"
+                    aria-label="Close navigation menu"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            </div>
+            <nav class="fa-sidebar-nav">
+
+                <!-- Dashboard -->
+                <p class="fa-nav-heading">Dashboard</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/dashboard}" class="fa-nav-link"><i class="bi bi-speedometer2" aria-hidden="true"></i> <span>Dashboard</span></a>
+                    </li>
+                </ul>
+
+                <!-- Employee and Fund Management -->
+                <p class="fa-nav-heading">Employee &amp; Fund</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i> <span>Employee Management</span></a>
+                    </li>
+                    <li>
+
+                        <!-- "active" = this is the current page -->
+                        <a
+                            th:href="@{/admin/contribution-workspace}"
+                            class="fa-nav-link"
+                            ><i class="bi bi-piggy-bank" aria-hidden="true"></i> <span>Contributions</span></a>
+                    </li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link active" aria-current="page"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
+                </ul>
+
+                <!-- Loan Management -->
+                <p class="fa-nav-heading">Loan Management</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/loans}" class="fa-nav-link"><i class="bi bi-cash-coin" aria-hidden="true"></i> <span>Loans</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i> <span>Loan Extensions</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/disbursements}" class="fa-nav-link"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> <span>Loan Disbursements</span></a>
+                    </li>
+                </ul>
+
+                <!-- Repayment Management -->
+                <p class="fa-nav-heading">Repayment Management</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/repayment-schedules}" class="fa-nav-link"><i class="bi bi-calendar-check" aria-hidden="true"></i> <span>Repayment Schedules</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/repayments}" class="fa-nav-link"><i class="bi bi-receipt" aria-hidden="true"></i> <span>Repayments</span></a>
+                    </li>
+                </ul>
+
+                <!-- Security and Access -->
+                <p class="fa-nav-heading">Security &amp; Access</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/user-accounts}" class="fa-nav-link"><i class="bi bi-person-gear" aria-hidden="true"></i> <span>User Accounts</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/roles}" class="fa-nav-link"><i class="bi bi-shield-lock" aria-hidden="true"></i> <span>Role Management</span></a>
+                    </li>
+                </ul>
+
+                <!-- Account and Security -->
+                <p class="fa-nav-heading">Account &amp; Security</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/change-password}" class="fa-nav-link"><i class="bi bi-key-fill" aria-hidden="true"></i> <span>Change Password</span></a>
+                    </li>
+                    <li>
+
+                        <!-- FundAxis logout form (sidebar). Logout must be POST (CSRF-safe) -->
+                        <form th:action="@{/logout}" method="post" class="fa-logout-form">
+                            <button type="submit" class="fa-nav-link fa-nav-button"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> <span>Sign Out</span></button>
+                        </form>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Dark overlay behind the sidebar on mobile (controlled by dashboard.js) -->
+        <div class="fa-overlay" id="faOverlay" hidden>
+        </div>
+
+        <!-- Right side: topbar + page content + footer -->
+        <div class="fa-main-wrap">
+
+            <!-- ============================================================
+                 TOP BAR
+                 (COMMON SHELL - keep identical on all admin pages)
+            ============================================================= -->
+            <header class="fa-topbar">
+
+                <!-- Left side: mobile menu button + title -->
+                <div class="fa-topbar-left">
+                    <button
+                        type="button"
+                        class="fa-menu-toggle"
+                        id="faMenuToggle"
+                        aria-label="Open navigation menu"
+                        aria-controls="faSidebar"
+                        aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i></button>
+                    <span class="fa-topbar-title">FundAxis <span class="fa-topbar-sub d-none d-md-inline">Employee Fund Management</span></span>
+                </div>
+
+                <!-- Right side: notifications + profile dropdown -->
+                <div class="fa-topbar-right">
+
+                    <!-- Notification placeholder (no function yet) -->
+                    <button type="button" class="fa-icon-btn" aria-label="Notifications (none)"><i class="bi bi-bell" aria-hidden="true"></i></button>
+
+                    <!-- Profile dropdown (Bootstrap dropdown) -->
+                    <div class="dropdown">
+                        <button
+                            class="fa-profile-btn dropdown-toggle"
+                            type="button"
+                            id="faProfileMenu"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            <span class="fa-avatar" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
+                            <span class="fa-profile-meta d-none d-sm-flex">
+
+                                <!-- sec:authentication="name" = logged-in username from Spring Security -->
+                                <span class="fa-profile-name" sec:authentication="name">username</span>
+                                <span class="fa-role-badge fa-role-admin">ADMIN</span>
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end fa-dropdown" aria-labelledby="faProfileMenu">
+                            <li class="fa-dropdown-header">
+                                <span class="fa-profile-name" sec:authentication="name">username</span>
+                                <span class="fa-role-badge fa-role-admin">ADMIN</span>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item" th:href="@{/profile}"><i class="bi bi-person-badge" aria-hidden="true"></i> My Profile</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" th:href="@{/change-password}"><i class="bi bi-key" aria-hidden="true"></i> Change Password</a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+
+                                <!-- FundAxis logout form (profile dropdown) -->
+                                <form th:action="@{/logout}" method="post">
+                                    <button type="submit" class="dropdown-item fa-dropdown-danger"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign Out</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ============================================================
+                 MAIN WORKSPACE
+            ============================================================= -->
+<main class="fa-content cs-workspace swp-workspace" id="main-content" tabindex="-1">
+  <header class="swp-page-heading"><div><span class="swp-eyebrow">EMPLOYEE FUND OPERATIONS</span><h1>Share Withdrawal &amp; Profit Allocation</h1><p>Manage withdrawal requests, share balances and financial history.</p></div><a class="cs-btn cs-btn-primary" th:href="@{/admin/share-withdrawal-profit(tab='withdrawals')}"><i class="bi bi-plus-lg" aria-hidden="true"></i> New Withdrawal</a></header>
+  <div class="swp-notice swp-notice--success" th:if="${moduleSuccess != null}" th:text="${moduleSuccess}" role="status"></div>
+  <div class="swp-notice swp-notice--error" th:if="${moduleError != null}" th:text="${moduleError}" role="alert"></div>
+  <nav class="swp-tabs" aria-label="Share withdrawal and profit sections"><a th:each="t : ${ {'overview','withdrawals','profit','history'} }" th:href="@{/admin/share-withdrawal-profit(tab=${t},employeeId=${employeeId})}" th:classappend="${tab == t} ? 'is-active'" th:attr="aria-current=${tab == t ? 'page' : null}" th:text="${t == 'overview' ? 'Overview' : (t == 'withdrawals' ? 'Share Withdrawals' : (t == 'profit' ? 'Profit Allocation' : 'History & Reports'))}"></a></nav>
+  <div class="swp-notice" th:if="${!enabled}"><strong>Controlled setup required</strong><p>Requests are disabled until the reviewed withdrawal schema is applied and this module is enabled. Approval authority and share-posting timing require separate policy confirmation. No balances are changed by this screen.</p></div>
+  <section th:if="${tab == 'overview'}" class="swp-stack">
+    <div class="swp-kpis">
+      <div class="swp-kpi"><i class="bi bi-collection" aria-hidden="true"></i><span>Total Share Holdings</span><strong th:text="${summary != null ? summary.holdings : 'Not available'}"></strong><small>Current OLD and NEW holding records</small></div>
+      <div class="swp-kpi swp-kpi--pending"><i class="bi bi-hourglass-split" aria-hidden="true"></i><span>Pending Requests</span><strong th:text="${summary != null ? summary.pending : 'Not available'}"></strong><small>Submitted; no share deduction</small></div>
+      <div class="swp-kpi"><i class="bi bi-person-check" aria-hidden="true"></i><span>Approved &amp; Awaiting Action</span><strong th:text="${summary != null ? summary.approved : 'Not available'}"></strong><small>Approval is separate from posting and payment</small></div>
+      <div class="swp-kpi"><i class="bi bi-cash-stack" aria-hidden="true"></i><span>Disbursed Amount &middot; BDT</span><strong th:text="${summary != null and summary.disbursed != null ? #numbers.formatDecimal(summary.disbursed,1,'COMMA',2,'POINT') : 'Not available'}"></strong><small>All-time recorded DISBURSED net amounts</small></div>
+      <div class="swp-kpi"><i class="bi bi-pie-chart" aria-hidden="true"></i><span>Unreserved Share Quantity</span><strong th:text="${summary != null ? (summary.available >= 0 ? summary.available : 'Reconciliation required') : 'Not available'}"></strong><small>Current quantity minus unposted pending/approved requests</small></div>
+      <div class="swp-kpi"><i class="bi bi-bar-chart" aria-hidden="true"></i><span>Profit Allocation</span><strong>Policy pending</strong><small>No formula or profit posting is configured</small></div>
+    </div>
+    <section class="swp-card"><div class="swp-section-heading"><div><h2>Requires Your Attention</h2><p>Pending review, share posting and settlement prerequisites.</p></div><a class="swp-text-link" th:href="@{/admin/share-withdrawal-profit(tab='history')}">View all requests <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div th:replace="~{:: withdrawalTable(rows=${attention},compact=true)}"></div><p class="swp-empty" th:if="${attention == null or attention.isEmpty()}">No requests available for attention.</p></section>
+    <div class="swp-quick-actions"><a class="cs-btn cs-btn-primary" th:href="@{/admin/share-withdrawal-profit(tab='withdrawals')}">New Withdrawal</a><a class="cs-btn cs-btn-outline" th:href="@{/admin/share-withdrawal-profit(tab='history')}">View History</a></div>
+    <section class="swp-card"><div class="swp-section-heading"><div><h2>Recent Activity</h2><p>Latest request records and their actual lifecycle state.</p></div></div><div th:replace="~{:: withdrawalTable(rows=${recent},compact=true)}"></div><p class="swp-empty" th:if="${recent == null or recent.isEmpty()}">No withdrawal activity is available.</p></section>
+  </section>
+  <section th:if="${tab == 'withdrawals'}" class="swp-stack">
+    <div class="swp-request-layout">
+      <section class="swp-card"><div class="swp-section-heading"><div><span class="swp-eyebrow">STEP 1</span><h2>Select Employee</h2><p>Use the official business Employee ID.</p></div></div><div class="swp-card-body">
+        <form id="swp-lookup-form" method="get" th:action="@{/admin/share-withdrawal-profit}"><input type="hidden" name="tab" value="withdrawals"><label for="swp-employee-id">Business Employee ID</label><div class="swp-input-action"><input id="swp-employee-id" class="cs-form-control" name="employeeId" maxlength="50" required th:value="${employeeId}" placeholder="e.g. EMP18"><button class="cs-btn cs-btn-primary" type="submit" th:disabled="${!storageReady}"><i class="bi bi-search" aria-hidden="true"></i> Find</button></div></form>
+        <p id="swp-lookup-message" role="status" aria-live="polite"></p>
+        <div id="swp-employee-card" class="swp-employee-card" th:hidden="${portfolio == null}"><h3 data-employee-name th:text="${portfolio != null ? portfolio.fullName : ''}"></h3><dl><div><dt>Employee ID</dt><dd data-employee-id th:text="${portfolio != null ? portfolio.employeeId : ''}"></dd></div><div><dt>Designation</dt><dd data-designation th:text="${portfolio != null ? portfolio.designation : ''}"></dd></div><div><dt>Status</dt><dd data-member-status th:text="${portfolio != null ? portfolio.status : ''}"></dd></div><div><dt>Fund joined</dt><dd data-joined th:text="${portfolio != null ? (portfolio.joined ?: 'Not recorded') : ''}"></dd></div><div><dt>Fund exited</dt><dd data-exited th:text="${portfolio != null ? (portfolio.exited ?: 'Not recorded') : ''}"></dd></div></dl></div>
+        <div id="swp-holdings" class="swp-holdings"><div th:each="h : ${portfolio != null ? portfolio.holdings : {}}" class="swp-holding"><strong th:text="|${h.category} Shares|"></strong><dl><div><dt>Current quantity</dt><dd th:text="${h.quantity}"></dd></div><div><dt>Reserved</dt><dd th:text="${h.reserved}"></dd></div><div><dt>Available</dt><dd th:text="${h.available}"></dd></div><div><dt>Recorded value/share</dt><dd th:text="${h.recordedValue != null ? 'BDT ' + h.recordedValue : 'Not recorded'}"></dd></div></dl></div></div>
+        <p class="swp-help">Recorded holding value is not an approved redemption price. Loan/credit offsets are not evaluated or applied without an approved policy.</p>
+      </div></section>
+      <section class="swp-card"><div class="swp-section-heading"><div><span class="swp-eyebrow">STEPS 2 &amp; 3</span><h2>Review &amp; Submit Request</h2><p>One holding per request. Submission does not deduct shares.</p></div></div><form id="swp-request-form" class="swp-card-body swp-form" method="post" th:action="@{/admin/share-withdrawal-profit/requests}">
+        <input type="hidden" name="requestToken" th:value="${requestToken}"><input id="swp-selected-employee" type="hidden" name="employeeId" th:value="${portfolio != null ? portfolio.employeeId : ''}">
+        <label>Share category<select id="swp-category" name="category" class="cs-form-select" required th:disabled="${portfolio == null or !storageReady}"><option value="">Select OLD or NEW holding</option><option th:each="h : ${portfolio != null ? portfolio.holdings : {}}" th:value="${h.category}" th:text="|${h.category} &middot; ${h.available} available|" th:attr="data-available=${h.available}" th:disabled="${h.available <= 0}"></option></select></label>
+        <label>Requested quantity<input id="swp-quantity" name="quantity" class="cs-form-control" type="number" min="1" step="1" required th:disabled="${portfolio == null or !storageReady}"></label>
+        <p class="swp-quantity-note" id="swp-availability">Select a holding to see the available quantity.</p>
+        <label>Reason<textarea class="cs-form-control" name="reason" rows="3" maxlength="500" required th:disabled="${portfolio == null or !storageReady}" placeholder="Explain the withdrawal request"></textarea></label>
+        <div class="swp-notice"><strong>Monetary settlement is not available</strong><p>Gross, deductions and net payable remain unassigned until approved redemption and liability rules exist.</p></div>
+        <label class="swp-confirm"><input type="checkbox" required th:disabled="${portfolio == null or !storageReady}"><span>I have reviewed the employee, holding and quantity. This creates a pending request only.</span></label>
+        <button id="swp-submit" class="cs-btn cs-btn-primary" type="submit" th:disabled="${portfolio == null or !storageReady}"><i class="bi bi-send" aria-hidden="true"></i> Submit Withdrawal Request</button>
+      </form></section>
+    </div>
+  </section>
+  <section th:if="${tab == 'profit'}" class="swp-stack">
+    <section class="swp-card swp-profit"><span class="swp-policy-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span><h2>Profit Allocation Awaits Approved Rules</h2><p>No rate, eligibility rule, allocation formula or posting model has been approved. This version cannot calculate, approve or post profit.</p><div class="swp-profit-grid"><div><h3>Allocation period</h3><p>Annual versus other periods must be confirmed.</p></div><div><h3>Employee eligibility</h3><p>Membership, historical ownership, OLD/NEW categories and withdrawal effects need approved rules.</p></div><div><h3>Distributable profit</h3><p>Approved profit source, reserves and deductions are not configured.</p></div><div><h3>Preview &amp; history</h3><p>No fictional preview or allocation totals are shown. Posting remains unavailable.</p></div></div><p class="swp-help">Future workflow: period &rarr; approved eligibility/data &rarr; calculation preview &rarr; reconciliation &rarr; authorization &rarr; posting &rarr; reports.</p></section>
+  </section>
+  <section th:if="${tab == 'withdrawals' or tab == 'history'}" class="swp-card" id="swp-history-section">
+    <div class="swp-section-heading"><div><h2 th:text="${tab == 'history' ? 'Withdrawal History & Reports' : 'Withdrawal Requests'}"></h2><p>Filters use request date. Amounts reflect stored records only; unavailable values stay unavailable.</p></div><a class="cs-btn cs-btn-outline" th:if="${tab == 'history' and enabled}" th:href="@{/admin/share-withdrawal-profit/withdrawals.xlsx(employeeId=${employeeId},from=${from},to=${to},category=${category},status=${status})}"><i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Export filtered register</a></div>
+    <form class="swp-history-filters" method="get" th:action="@{/admin/share-withdrawal-profit}"><input type="hidden" name="tab" th:value="${tab}"><label>Employee ID<input class="cs-form-control" name="employeeId" maxlength="50" th:value="${employeeId}"></label><label>From request date<input class="cs-form-control" type="date" name="from" th:value="${from}"></label><label>To request date<input class="cs-form-control" type="date" name="to" th:value="${to}"></label><label>Category<select name="category" class="cs-form-select"><option value="">All holdings</option><option th:each="c : ${ {'OLD','NEW'} }" th:value="${c}" th:text="${c}" th:selected="${category == c}"></option></select></label><label>Status<select name="status" class="cs-form-select"><option value="">All statuses</option><option th:each="s : ${ {'PENDING','APPROVED','REJECTED','CANCELLED','DISBURSED'} }" th:value="${s}" th:text="${s}" th:selected="${status == s}"></option></select></label><label>Sort by<select class="cs-form-select" name="sort"><option th:each="s : ${ {'requestDate','employeeId','quantity','status'} }" th:value="${s}" th:text="${s}" th:selected="${sort == s}"></option></select></label><label>Rows<select class="cs-form-select" name="size"><option th:each="n : ${ {10,25,50,100} }" th:value="${n}" th:text="${n}" th:selected="${pageSize == n}"></option></select></label><div class="swp-actions"><button class="cs-btn cs-btn-primary" type="submit">Apply</button><a class="cs-btn cs-btn-outline" th:href="@{/admin/share-withdrawal-profit(tab=${tab})}">Reset</a></div></form>
+    <div class="swp-history-results" th:if="${history != null}"><div th:replace="~{:: withdrawalTable(rows=${history.content},compact=false)}"></div><p class="swp-empty" th:if="${history.empty}">No withdrawal requests match these filters.</p><nav class="swp-pagination" aria-label="Withdrawal history pages"><a class="cs-btn cs-btn-outline" th:if="${history.hasPrevious()}" th:href="@{/admin/share-withdrawal-profit(tab=${tab},employeeId=${employeeId},category=${category},status=${status},from=${from},to=${to},sort=${sort},size=${pageSize},page=${history.number - 1})}">Previous</a><span th:text="|Page ${history.number + 1} of ${T(java.lang.Math).max(1,history.totalPages)} &middot; ${history.totalElements} requests|"></span><a class="cs-btn cs-btn-outline" th:if="${history.hasNext()}" th:href="@{/admin/share-withdrawal-profit(tab=${tab},employeeId=${employeeId},category=${category},status=${status},from=${from},to=${to},sort=${sort},size=${pageSize},page=${history.number + 1})}">Next</a></nav></div>
+  </section>
+  <section class="swp-card" th:if="${detail != null}" th:with="d=${detail}" id="swp-request-details">
+    <div class="swp-section-heading"><div><span class="swp-eyebrow" th:text="|WITHDRAWAL #${d.id}|"></span><h2 th:text="|${d.fullName} &middot; ${d.employeeId}|"></h2><p th:text="|${d.designation} &middot; ${d.category} shares &middot; ${d.quantity} requested|"></p></div><span class="swp-status" th:attr="data-status=${d.status}" th:text="${d.status}"></span></div>
+    <div class="swp-card-body"><div class="swp-detail-metrics"><div><span>Current holding</span><strong th:text="${d.holdingQuantity}"></strong></div><div><span>Unreserved for new requests</span><strong th:text="${d.unreserved}"></strong></div><div><span>Gross &middot; BDT</span><strong th:text="${d.gross != null ? #numbers.formatDecimal(d.gross,1,'COMMA',2,'POINT') : 'Not available'}"></strong></div><div><span>Net payable &middot; BDT</span><strong th:text="${d.net != null ? #numbers.formatDecimal(d.net,1,'COMMA',2,'POINT') : 'Not available'}"></strong></div></div><p class="swp-help">Request reason: <span th:text="${d.reason}"></span></p>
+    <ol class="swp-timeline"><li><strong>Request submitted</strong><span th:text="|${d.requestDate} &middot; ${d.requestedBy ?: 'Legacy requester not recorded'}|"></span></li><li th:classappend="${d.approvedAt != null} ? 'is-complete'"><strong th:text="${d.approvedAt != null ? 'Request approved' : 'Approval not recorded'}"></strong><span th:if="${d.approvedAt != null}" th:text="|${d.approvedAt} &middot; ${d.approvedBy}|"></span></li><li th:classappend="${d.postedAt != null} ? 'is-complete'"><strong th:text="${d.postedAt != null ? 'Shares posted' : 'Share posting not recorded'}"></strong><span th:if="${d.postedAt != null}" th:text="|${d.postedAt} &middot; ${d.postedBy ?: 'Actor not recorded'} &middot; ${d.transactionReference ?: 'Legacy transaction link missing'}|"></span></li><li><strong th:text="${d.disbursedAt != null ? 'Disbursement recorded' : 'Disbursement not recorded'}"></strong><span th:if="${d.disbursedAt != null}" th:text="|${d.disbursedAt} &middot; ${d.paymentReference ?: 'Reference not recorded'}|"></span></li><li th:if="${d.resolvedAt != null}"><strong th:text="${d.status}"></strong><span th:text="|${d.resolvedAt} &middot; ${d.resolvedBy}|"></span><p th:text="${d.rejectionReason ?: d.cancellationReason}"></p></li></ol>
+    <div class="swp-notice" th:if="${!approvalEnabled}">Approval authority and independent maker-checker policy are awaiting confirmation. Approval/rejection controls are locked.</div><div class="swp-notice" th:if="${approvalEnabled and !checkerAuthorized}">A separately assigned WITHDRAWAL_CHECKER authority is required.</div>
+    <div class="swp-sensitive-actions" th:if="${d.status.name() == 'PENDING' and approvalEnabled and checkerAuthorized and d.requestedBy != null and d.requestedBy != actor}">
+      <form method="post" th:action="@{/admin/share-withdrawal-profit/requests/{id}/approve(id=${d.id})}"><input type="hidden" name="version" th:value="${d.version}"><label class="swp-confirm"><input type="checkbox" name="confirmed" value="true" required><span>I independently reviewed this request. Approval alone does not deduct shares or pay money.</span></label><button class="cs-btn cs-btn-primary" type="submit">Approve Request</button></form>
+      <form method="post" th:action="@{/admin/share-withdrawal-profit/requests/{id}/reject(id=${d.id})}"><input type="hidden" name="version" th:value="${d.version}"><label>Rejection reason<textarea name="reason" class="cs-form-control" required maxlength="500" rows="2"></textarea></label><label class="swp-confirm"><input type="checkbox" name="confirmed" value="true" required><span>Confirm rejection and reservation release.</span></label><button class="cs-btn cs-btn-outline" type="submit">Reject Request</button></form>
+    </div>
+    <form class="swp-transition-form" th:if="${d.status.name() == 'PENDING' and d.requestedBy == actor}" method="post" th:action="@{/admin/share-withdrawal-profit/requests/{id}/cancel(id=${d.id})}"><input type="hidden" name="version" th:value="${d.version}"><label>Cancellation reason<textarea name="reason" class="cs-form-control" required maxlength="500" rows="2"></textarea></label><label class="swp-confirm"><input type="checkbox" name="confirmed" value="true" required><span>Cancel my pending request and release its reservation.</span></label><button type="submit" class="cs-btn cs-btn-outline">Cancel My Request</button></form>
+    <form class="swp-transition-form" th:if="${d.status.name() == 'APPROVED' and d.postedAt == null and postingEnabled}" method="post" th:action="@{/admin/share-withdrawal-profit/requests/{id}/post-shares(id=${d.id})}"><input type="hidden" name="version" th:value="${d.version}"><label class="swp-confirm"><input type="checkbox" name="confirmed" value="true" required><span>Post the approved share decrease using today's effective date. This does not disburse cash.</span></label><button type="submit" class="cs-btn cs-btn-primary">Post Shares</button></form>
+    <p class="swp-help" th:if="${!postingEnabled}">Share posting is locked until its timing/effective-date policy is confirmed.</p><p class="swp-help">Confirm Disbursement is unavailable: redemption valuation, deductions, loan/credit treatment and payment confirmation require approved rules. No bank transfer integration is implied.</p>
+    </div>
+  </section>
+</main>
+<footer class="fa-footer"><span>FundAxis &mdash; Employee Fund Management System</span><span>Authorized Internal Use Only</span></footer>
+</div></div>
+<th:block th:fragment="withdrawalTable(rows,compact)" th:if="${rows != null}"><div class="swp-table-scroll"><table class="swp-table"><thead><tr><th>Employee ID</th><th>Employee name</th><th>Category</th><th>Shares</th><th>Request date</th><th th:if="${!compact}">Gross &middot; BDT</th><th>Net &middot; BDT</th><th>Status</th><th th:if="${!compact}">Approved</th><th th:if="${!compact}">Disbursed</th><th>Action</th></tr></thead><tbody><tr th:each="r : ${rows}"><td class="swp-business-id" th:text="${r.employeeId}"></td><td th:text="${r.fullName}"></td><td th:text="${r.category}"></td><td class="swp-number" th:text="${r.quantity}"></td><td th:text="${r.requestDate}"></td><td class="swp-number" th:if="${!compact}" th:text="${r.gross != null ? #numbers.formatDecimal(r.gross,1,'COMMA',2,'POINT') : 'Not available'}"></td><td class="swp-number" th:text="${r.net != null ? #numbers.formatDecimal(r.net,1,'COMMA',2,'POINT') : 'Not available'}"></td><td><span class="swp-status" th:attr="data-status=${r.status}" th:text="${r.status}"></span></td><td th:if="${!compact}" th:text="${r.approvedAt ?: 'Not recorded'}"></td><td th:if="${!compact}" th:text="${r.disbursedAt ?: 'Not recorded'}"></td><td><a class="cs-btn cs-btn-outline" th:href="@{/admin/share-withdrawal-profit(tab='withdrawals',employeeId=${r.employeeId},requestId=${r.id})}+'#swp-request-details'">View Details</a></td></tr></tbody></table></div></th:block>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/dashboard.js}"></script><script th:src="@{/js/share-withdrawal-profit.js}" defer></script>
+</body></html>

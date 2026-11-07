@@ -2,13 +2,22 @@ package com.fundaxis.repository;
 
 import com.fundaxis.entity.Loan;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
+
+    /** Parent-row lock serializes disbursement cap checks for a loan. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from Loan l where l.id = :id")
+    Optional<Loan> findByIdForUpdate(@Param("id") Long id);
 
     // Find a loan using its unique Loan Application ID
     Optional<Loan> findByLoanApplicationId(String loanApplicationId);

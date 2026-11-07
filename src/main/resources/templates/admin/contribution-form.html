@@ -1,33 +1,34 @@
 <!--- FundAxis Admin Contribution Form (ADMIN only; backend authorization stays authoritative).
-      ADD mode:  GET /admin/contributions/new                 -> POST /admin/contributions
-      EDIT mode: GET /admin/contributions/{id}/edit (model "editMode" = true) -> POST /admin/contributions/{id}/update
-      Edit mode is for PENDING contributions only (the backend decides). Only month and amount are editable;
-      the employee, status, payment date, audit timestamps and record id are never posted from the form.
-      On a failed update, re-render with the loaded contribution (id and employee set) so the page can show the
-      read-only Employee ID and build its links.
+      ADD mode (BULK):  GET /admin/contributions/new  -> POST /admin/contributions/bulk
+          Multi-employee batch: one shared month, N rows, batch review, ONE atomic save.
+          Bound object: BulkContributionCreateRequest (contributionMonth + entries[i].employeeId/contributionAmount).
+      EDIT mode (SINGLE): GET /admin/contributions/{id}/edit (model "editMode" = true) -> POST /admin/contributions/{id}/update
+          PENDING contributions only; employee read-only; only month and amount editable. Unchanged workflow.
       Expected model attributes:
-        contribution     empty Contribution object on GET (and the bound object when the form is re-rendered after errors)
+        contribution     empty Contribution on GET (bound object when re-rendered after errors) - EDIT mode only
         errorMessage     optional business error (employee not found, duplicate month, ...)
-      The employee is identified ONLY by the official bank Employee ID (request parameter "employeeId");
-      the database Employee id, status, payment date and audit timestamps are never sent from this form. --->
+        successMessage   flash after a successful bulk save
+      The employee is identified ONLY by the official bank Employee ID (employees are looked up per row;
+      the database Employee id, status, payment date and audit timestamps are never sent from this form.
+      contribution.css + contribution.js are the merged bundles loaded on every admin page. --->
 
 <!DOCTYPE html>
 <html lang="en"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title th:text="${editMode != null and editMode} ? 'Edit Contribution | FundAxis' : 'Add Contribution | FundAxis'">Add Contribution | FundAxis</title>
+    <title th:text="${editMode != null and editMode} ? 'Edit Contribution | FundAxis' : 'Add Contributions | FundAxis'">Add Contributions | FundAxis</title>
 
     <!-- Bootstrap 5 + Bootstrap Icons (CDN) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-    <!-- Shared FundAxis dashboard styles + the button / form-control / note styles from the Employee Management page -->
-    <link th:href="@{/css/dashboard.css}" rel="stylesheet">
-    <link th:href="@{/css/admin-employees.css}" rel="stylesheet">
+    <!-- Merged FundAxis admin bundle (was dashboard.css + admin-employees.css) -->
+    <link th:href="@{/css/contribution.css}" rel="stylesheet">
 </head>
 <body class="fa-body">
 
@@ -39,7 +40,7 @@
     <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
         <div class="fa-sidebar-brand">
             <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">
-                <img th:src="@{/images/fundaxis-logo.png}" alt="FundAxis" class="fa-brand-logo">
+                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
                 <span class="fa-brand-text">FundAxis</span>
             </a>
             <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">
@@ -58,7 +59,8 @@
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>
                 <!-- Contributions stays the active item on this page -->
-                <li><a th:href="@{/admin/contributions}" class="fa-nav-link active" aria-current="page"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link active" aria-current="page"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
                 <li><a th:href="@{/admin/loans}" class="fa-nav-link"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>
                 <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>
                 <li><a th:href="@{/admin/disbursements}" class="fa-nav-link"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Loan Disbursements</span></a></li>
@@ -149,30 +151,35 @@
         <main class="fa-content" id="main-content" tabindex="-1"
               th:with="currency='BDT', isEdit=${editMode != null and editMode}">
 
-            <!-- FundAxis Admin Add Contribution -->
+            <!-- FundAxis Admin Add / Edit Contribution -->
             <div class="fa-page-header">
                 <div>
-                    <h1 class="fa-page-title" th:text="${isEdit} ? 'Edit Contribution' : 'Add Contribution'">Add Contribution</h1>
+                    <h1 class="fa-page-title" th:text="${isEdit} ? 'Edit Contribution' : 'Add Contributions'">Add Contributions</h1>
                     <p class="fa-page-subtitle"
-                       th:text="${isEdit} ? 'Update this pending contribution record.' : 'Create a monthly contribution record for an employee.'">Create a monthly contribution record for an employee.</p>
+                       th:text="${isEdit} ? 'Update this pending contribution record.' : 'Create monthly contribution dues for multiple employees in one step.'">Create monthly contribution dues for multiple employees in one step.</p>
                     <nav aria-label="Breadcrumb">
                         <ol class="breadcrumb fa-breadcrumb">
                             <li class="breadcrumb-item"><a th:href="@{/admin/dashboard}">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a th:href="@{/admin/contributions}">Contribution Management</a></li>
-                            <!-- Add:  Dashboard / Contribution Management / Add Contribution
+                            <li class="breadcrumb-item"><a th:href="@{/admin/contribution-workspace}">Contribution Management</a></li>
+                            <!-- Add:  Dashboard / Contribution Management / Add Contributions
                                  Edit: Dashboard / Contribution Management / Contribution Details / Edit Contribution -->
                             <li class="breadcrumb-item" th:if="${isEdit}">
                                 <a th:href="@{/admin/contributions/{id}(id=${contribution.id})}">Contribution Details</a>
                             </li>
                             <li class="breadcrumb-item active" aria-current="page"
-                                th:text="${isEdit} ? 'Edit Contribution' : 'Add Contribution'">Add Contribution</li>
+                                th:text="${isEdit} ? 'Edit Contribution' : 'Add Contributions'">Add Contributions</li>
                         </ol>
                     </nav>
                 </div>
             </div>
 
-            <!-- Backend business errors (employee not found, duplicate month, ...) -->
+            <!-- Success / business-error alerts -->
             <div class="fa-alerts" aria-live="polite">
+                <div class="alert alert-success alert-dismissible fade show fa-alert" role="alert" th:if="${successMessage != null}">
+                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                    <span th:text="${successMessage}">Success message.</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
                 <div class="alert alert-danger alert-dismissible fade show fa-alert" role="alert" th:if="${errorMessage != null}">
                     <i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i>
                     <span th:text="${errorMessage}">Error message.</span>
@@ -181,15 +188,15 @@
             </div>
 
             <div class="row justify-content-center">
-                <div class="col-12 col-xl-9">
+                <div class="col-12 col-xxl-11">
 
-                    <!-- POST /admin/contributions (CSRF token added by th:action).
-                         The browser validates required / min / pattern for quick feedback; the backend still validates everything. -->
-                    <form method="post" id="contributionForm"
+                    <!-- ============================================================
+                         EDIT MODE — single contribution, unchanged workflow.
+                         POST /admin/contributions/{id}/update (CSRF token via th:action).
+                         ============================================================ -->
+                    <form method="post" id="contributionForm" th:if="${isEdit}"
                           th:object="${contribution}"
-                          th:action="${isEdit}
-                              ? @{/admin/contributions/{id}/update(id=${contribution.id})}
-                              : @{/admin/contributions}">
+                          th:action="@{/admin/contributions/{id}/update(id=${contribution.id})}">
 
                         <section class="fa-card" aria-labelledby="contributionFormTitle">
 
@@ -207,9 +214,6 @@
                                     </div>
                                 </div>
 
-                                <p class="text-secondary small mb-4">
-                                    Fields marked with <span class="text-danger" aria-hidden="true">*</span> are required.
-                                </p>
 
                                 <!-- ======================= EMPLOYEE ======================= -->
                                 <fieldset class="mb-4">
@@ -218,7 +222,7 @@
                                     <div class="row g-3">
                                         <!-- EDIT mode: official Employee ID shown read-only.
                                              It has no name attribute, so it is never submitted and the employee cannot be reassigned. -->
-                                        <div class="col-12 col-md-6" th:if="${isEdit}">
+                                        <div class="col-12 col-md-6">
                                             <label for="employeeIdReadonly" class="fa-label">Employee ID</label>
                                             <input type="text" id="employeeIdReadonly"
                                                    class="form-control fa-input bg-body-secondary"
@@ -231,25 +235,6 @@
                                                 </span>
                                             </div>
                                         </div>
-
-                                        <!-- ADD mode: editable official Employee ID -->
-                                        <div class="col-12 col-md-6" th:unless="${isEdit}">
-                                            <label for="employeeId" class="fa-label">
-                                                Employee ID <span class="text-danger" aria-hidden="true">*</span>
-                                                <span class="visually-hidden">(required)</span>
-                                            </label>
-                                            <!-- Official bank Employee ID, posted as the "employeeId" parameter.
-                                                 After a failed save the typed value is restored from the request parameter. -->
-                                            <input type="text" id="employeeId" name="employeeId"
-                                                   class="form-control fa-input"
-                                                   placeholder="e.g. EMP003"
-                                                   required autocomplete="off" spellcheck="false" autofocus
-                                                   th:value="${employeeId != null ? employeeId : (param.employeeId != null ? param.employeeId[0] : '')}"
-                                                   aria-describedby="employeeIdHelp">
-                                            <div class="form-text" id="employeeIdHelp">
-                                                Enter the employee's official bank Employee ID.
-                                            </div>
-                                        </div>
                                     </div>
                                 </fieldset>
 
@@ -260,7 +245,7 @@
                                     <div class="row g-3">
 
                                         <!-- Contribution month.
-                                             The visible month picker has no name: contributionMonth.js copies its value
+                                             The visible month picker has no name: contribution.js copies its value
                                              (yyyy-MM) as yyyy-MM-01 into the hidden "contributionMonth" field on submit. -->
                                         <div class="col-12 col-md-6">
                                             <label for="contributionMonthInput" class="fa-label">
@@ -310,41 +295,228 @@
                                     </div>
                                 </fieldset>
 
-                                <!-- Business rule note -->
-                                <!-- EDIT mode note -->
-                                <div class="fa-modal-employee mt-4 mb-0" th:if="${isEdit}">
+                                <!-- Business rule note (EDIT mode) -->
+                                <div class="fa-modal-employee mt-4 mb-0">
                                     <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
                                     Only pending contributions can be edited. Employee, status and payment
                                     date cannot be changed here, and a contribution month already used by
                                     this employee is not allowed.
                                 </div>
-
-                                <!-- ADD mode note -->
-                                <div class="fa-modal-employee mt-4 mb-0" th:unless="${isEdit}">
-                                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-                                    New contribution records are created according to FundAxis contribution
-                                    business rules. Duplicate contribution months for the same employee
-                                    are not allowed.
-                                </div>
                             </div>
 
                             <!-- Form actions -->
                             <div class="fa-table-footer justify-content-end">
-                                <!-- Cancel - Add mode: back to the contribution list -->
-                                <a th:unless="${isEdit}" th:href="@{/admin/contributions}"
-                                   class="fa-btn fa-btn-outline flex-fill flex-sm-grow-0">Cancel</a>
-
                                 <!-- Cancel - Edit mode: back to this contribution's details -->
-                                <a th:if="${isEdit}" th:href="@{/admin/contributions/{id}(id=${contribution.id})}"
+                                <a th:href="@{/admin/contributions/{id}(id=${contribution.id})}"
                                    class="fa-btn fa-btn-outline flex-fill flex-sm-grow-0">Cancel</a>
                                 <button type="submit" id="saveContributionButton" class="fa-btn fa-btn-primary flex-fill flex-sm-grow-0">
                                     <i class="bi bi-check2-circle" aria-hidden="true"></i>
-                                    <span id="saveContributionButtonText"
-                                          th:text="${isEdit} ? 'Update Contribution' : 'Save Contribution'">Save Contribution</span>
+                                    <span id="saveContributionButtonText">Update Contribution</span>
                                 </button>
                             </div>
 
                         </section>
+                    </form>
+
+                    <!-- ============================================================
+                         ADD MODE (BULK) — multi-employee batch on one page.
+                         POST /admin/contributions/bulk (CSRF token via th:action).
+                         novalidate: the JS drops untouched blank rows BEFORE running
+                         constraint validation, then submits once, atomically.
+                         Bound object: BulkContributionCreateRequest
+                           contributionMonth            (hidden, yyyy-MM-01)
+                           entries[i].employeeId        (official bank Employee ID)
+                           entries[i].contributionAmount
+                         ============================================================ -->
+                    <form method="post" id="bulkContributionForm" novalidate th:unless="${isEdit}"
+                          th:attr="data-prefill-employee-id=${prefillEmployeeId},data-prefill-year=${prefillYear},data-prefill-month=${prefillMonth}"
+                          th:action="@{/admin/contributions/bulk}">
+
+                        <section class="fa-card" aria-labelledby="bulkFormTitle">
+
+                            <div class="fa-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <h2 class="fa-card-title mb-0" id="bulkFormTitle">Contribution Batch</h2>
+                                <span class="badge text-bg-secondary" id="bulkRowCount" aria-live="polite">1 row</span>
+                            </div>
+
+                            <div class="p-3 p-md-4">
+
+
+                                <noscript>
+                                    <div class="alert alert-warning fa-alert" role="alert">
+                                        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                                        JavaScript is required to add employee rows on this page.
+                                    </div>
+                                </noscript>
+
+                                <!-- ==================== SHARED OPTIONS ==================== -->
+                                <fieldset class="mb-4">
+
+                                    <div class="row g-3">
+                                        <!-- Shared contribution month. Visible picker has no name; JS copies
+                                             yyyy-MM as yyyy-MM-01 into the hidden "contributionMonth" field. -->
+                                        <div class="col-12 col-md-6">
+                                            <label for="batchMonthInput" class="fa-label">
+                                                Contribution Month <span class="text-danger" aria-hidden="true">*</span>
+                                                <span class="visually-hidden">(required)</span>
+                                            </label>
+                                            <input type="month" id="batchMonthInput"
+                                                   class="form-control fa-input"
+                                                   required pattern="\d{4}-(0[1-9]|1[0-2])" placeholder="YYYY-MM">
+                                            <input type="hidden" id="batchMonth" name="contributionMonth">
+                                            <div class="form-text">
+                                                One month for the whole batch — every row records a due for this month.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+
+                                <!-- ======================= EMPLOYEE ROWS ======================= -->
+                                <fieldset>
+                                    <legend class="h6 text-uppercase text-secondary mb-3">Employees</legend>
+
+                                    <div class="row g-2 d-none d-md-flex
+            text-uppercase text-secondary small
+            fw-semibold px-3 pb-2"
+                                         aria-hidden="true">
+
+                                        <div class="col-md-1">SL</div>
+
+                                        <div class="col-md-2">
+                                            Employee ID <span class="text-danger">*</span>
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            Employee Name
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            Amount (BDT) <span class="text-danger">*</span>
+                                        </div>
+
+                                        <div class="col-md-1">Collection Method</div>
+
+                                        <div class="col-md-1">
+                                            Status
+                                        </div>
+
+                                        <div class="col-md-2 text-end">
+                                            Actions
+                                        </div>
+                                    </div>
+
+                                    <!-- Rows -->
+                                    <div id="bulkRows"></div>
+
+                                    <div class="mt-3">
+                                        <button type="button" id="addBulkRowButton" class="fa-btn fa-btn-outline">
+                                            <i class="bi bi-plus-circle" aria-hidden="true"></i> Add Another Employee
+                                        </button>
+                                        <span class="text-secondary small ms-2">Up to 50 employees per batch.</span>
+                                    </div>
+                                </fieldset>
+
+                                <!-- ====================== QUICK ACTIONS ====================== -->
+                                <div class="d-flex flex-wrap gap-2 mt-4">
+                                    <button type="button" id="pasteIdsButton" class="fa-btn fa-btn-outline fa-btn-sm">
+                                        <i class="bi bi-clipboard" aria-hidden="true"></i> Paste IDs
+                                    </button>
+                                    <button type="button" id="applyAmountButton" class="fa-btn fa-btn-outline fa-btn-sm">
+                                        <i class="bi bi-arrow-down-up" aria-hidden="true"></i> Apply Amount to All
+                                    </button>
+                                    <button type="button" id="clearInvalidButton" class="fa-btn fa-btn-outline fa-btn-sm">
+                                        <i class="bi bi-eraser" aria-hidden="true"></i> Clear Invalid Rows
+                                    </button>
+                                    <button type="button" id="resetBatchButton" class="fa-btn fa-btn-outline-danger fa-btn-sm">
+                                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset Batch
+                                    </button>
+                                </div>
+
+                                <!-- Business rule note -->
+                                <div class="fa-modal-employee mt-4 mb-0">
+                                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                                    New records are created as <strong>PENDING</strong> dues — no payment is recorded here.
+                                    A duplicate contribution month for the same employee (in this batch or already in
+                                    FundAxis) rejects the whole batch so nothing is saved half-way.
+                                </div>
+                            </div>
+
+                            <!-- Sticky batch summary + actions -->
+                            <div class="fa-table-footer fa-bulk-footer justify-content-between">
+                                <div class="d-flex gap-3 flex-wrap">
+                                    <span>Ready rows: <span class="fa-bulk-stat" id="bulkTotalReady">0</span></span>
+                                    <span>Total: <span class="fa-bulk-stat">BDT <span id="bulkTotalAmount">0.00</span></span></span>
+                                </div>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a th:href="@{/admin/contribution-workspace}" class="fa-btn fa-btn-outline">Cancel</a>
+                                    <button type="button" id="reviewBatchButton" class="fa-btn fa-btn-primary" disabled>
+                                        <i class="bi bi-clipboard-check" aria-hidden="true"></i> Review Batch
+                                    </button>
+                                </div>
+                            </div>
+
+                        </section>
+
+                        <!-- ==================== PASTE IDS MODAL ==================== -->
+                        <div class="modal fade" id="pasteIdsModal" tabindex="-1" aria-labelledby="pasteIdsModalTitle" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="pasteIdsModalTitle">Paste Employee IDs</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="text-secondary small">
+                                            One Employee ID per line. Duplicates are ignored and a row is created for each ID.
+                                        </p>
+                                        <textarea id="pasteIdsArea" class="form-control fa-input" rows="8"
+                                                  placeholder="EMP-001&#10;EMP-002&#10;EMP-003"
+                                                  spellcheck="false" aria-label="Employee IDs, one per line"></textarea>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="fa-btn fa-btn-outline" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" id="pasteIdsGoButton" class="fa-btn fa-btn-primary">
+                                            <i class="bi bi-plus-circle" aria-hidden="true"></i> Create Rows
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ==================== BATCH REVIEW MODAL ==================== -->
+                        <div class="modal fade" id="reviewBatchModal" tabindex="-1" aria-labelledby="reviewBatchModalTitle" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="reviewBatchModalTitle">Review Batch</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <table class="table table-sm fa-table fa-review-table">
+                                            <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Employee ID</th>
+                                                <th>Full Name</th>
+                                                <th>Month</th>
+                                                <th class="text-end">Amount (BDT)</th>
+                                                <th>Intended Collection Method</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody id="reviewRows"></tbody>
+                                        </table>
+                                        <p class="text-secondary small mt-3 mb-0" id="reviewSummary" aria-live="polite"></p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="fa-btn fa-btn-outline" data-bs-dismiss="modal">Back</button>
+                                        <button type="button" id="confirmSaveButton" class="fa-btn fa-btn-primary">
+                                            <i class="bi bi-check2-circle" aria-hidden="true"></i> Confirm &amp; Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </form>
 
                 </div>
@@ -359,8 +531,108 @@
     </div>
 </div>
 
+<datalist id="contributionRemarkSuggestions">
+    <option value="HO-Hand"></option>
+    <option value="Bank FT"></option>
+    <option value="ITD-Hand"></option>
+</datalist>
+
+<!-- Blank row for the bulk ADD form. Plain HTML on purpose: names use __INDEX__ which JS replaces
+     with a unique number per row, then re-indexes to entries[0..n-1] on submit. -->
+<template id="bulkRowTemplate" th:inline="none">
+    <div class="fa-bulk-row fa-employee-row border rounded-3 bg-body p-3 mb-2" data-row-index="__INDEX__">
+        <div class="row g-2 align-items-start">
+
+            <div class="col-12 col-md-1 d-flex align-items-center">
+                <span class="badge rounded-pill text-bg-light border fa-row-number" aria-hidden="true">1</span>
+            </div>
+
+            <div class="col-12 col-md-2">
+                <label for="bulkEmployeeId___INDEX__" class="fa-label d-md-none">Employee ID <span class="text-danger" aria-hidden="true">*</span></label>
+                <div class="input-group has-validation">
+                    <input type="text" class="form-control fa-input" data-field="employeeId"
+                           id="bulkEmployeeId___INDEX__" name="entries[__INDEX__].employeeId"
+                           placeholder="EMP-001" maxlength="20" required
+                           autocomplete="off" spellcheck="false" aria-label="Employee ID">
+                    <button type="button" class="btn btn-outline-secondary fa-row-lookup" aria-label="Look up employee">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
+                    <div class="invalid-feedback">Enter the Employee ID.</div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-3">
+                <label class="fa-label d-md-none">Employee Name</label>
+                <!-- Lookup result: full name (filled by JS) -->
+                <div class="fa-lookup-info small mt-1" aria-live="polite"></div>
+            </div>
+
+            <div class="col-12 col-md-2">
+                <label for="bulkAmount___INDEX__" class="fa-label d-md-none">Amount (BDT) <span class="text-danger" aria-hidden="true">*</span></label>
+                <input type="number" class="form-control fa-input" data-field="amount"
+                       id="bulkAmount___INDEX__" name="entries[__INDEX__].contributionAmount"
+                       min="0.01" step="0.01" inputmode="decimal"
+                       placeholder="0.00" required aria-label="Contribution amount in BDT">
+                <div class="invalid-feedback">Enter an amount of at least 0.01.</div>
+            </div>
+
+            <div class="col-12 col-md-1">
+                <label for="bulkMethod___INDEX__" class="fa-label d-md-none">Collection Method</label>
+                <select class="form-select fa-input" data-field="collectionMethod"
+                        id="bulkMethod___INDEX__" name="entries[__INDEX__].intendedCollectionMethod"
+                        aria-label="Intended collection method">
+                    <option value="">Not Specified</option>
+                    <option value="HO_HAND">HO-Hand</option>
+                    <option value="BANK_FT">Bank FT</option>
+                    <option value="ITD_HAND">ITD-Hand</option>
+                </select>
+            </div>
+
+            <!-- STATUS COLUMN -->
+            <div class="col-12 col-md-1 d-flex align-items-center">
+
+    <span class="fa-row-status small"
+          aria-live="polite"
+          data-status="empty">
+        EMPTY
+    </span>
+
+            </div>
+
+            <!-- ACTIONS COLUMN -->
+            <div class="col-12 col-md-2">
+
+                <div class="d-flex justify-content-md-end
+                align-items-center gap-2">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary fa-row-clear"
+                            title="Clear this employee row"
+                            aria-label="Clear row fields">
+
+                        <i class="bi bi-eraser" aria-hidden="true"></i>
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-danger fa-row-remove"
+                            title="Remove this employee row"
+                            aria-label="Remove row">
+
+                        <i class="bi bi-trash3" aria-hidden="true"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</template>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script th:src="@{/js/dashboard.js}"></script>
-<script th:src="@{/js/admin-contribution-form.js}"></script>
+<!-- Merged FundAxis admin bundle (was dashboard.js + admin-contribution-form.js + bulk rows) -->
+<script th:src="@{/js/contribution.js}"></script>
 </body>
 </html>

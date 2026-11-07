@@ -1,4 +1,4 @@
-/* ==========================================================
+﻿/* ==========================================================
    FundAxis - Home page styles (works on top of Bootstrap 5)
    ========================================================== */
 
@@ -7,9 +7,11 @@
     --brand-green-dark: #013A29;
     --text-dark: #12261F;
     --text-muted: #667970;
-    --surface-soft: #F2F8F5;
-    --surface-light: #F6FAF8;
-    --border: #DFE9E4;
+    --surface-soft: #E2EAE5;
+    --surface-light: #E5ECE8;
+    --surface-card: #F0F4F1;
+    --surface-input: #F3F6F3;
+    --border: #CCD9D1;
     --white: #FFFFFF;
     --success: #16794A;
     --radius: 16px;
@@ -23,7 +25,7 @@ html { scroll-behavior: smooth; }
 body {
     font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
     color: var(--text-dark);
-    background: var(--white);
+    background: var(--surface-light);
     padding-top: var(--nav-height);
     -webkit-font-smoothing: antialiased;
 }
@@ -45,7 +47,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 .btn-fa-outline { background: transparent; color: var(--brand-green); border: 2px solid var(--brand-green); }
 .btn-fa-outline:hover { background: var(--brand-green); color: var(--white); }
 
-.btn-fa-light { background: var(--white); color: var(--brand-green); border: 2px solid var(--white); }
+.btn-fa-light { background: var(--surface-card); color: var(--brand-green); border: 2px solid var(--surface-card); }
 .btn-fa-light:hover { background: var(--surface-soft); color: var(--brand-green-dark); }
 
 .btn-fa-ghost { background: transparent; color: var(--white); border: 2px solid rgba(255, 255, 255, 0.55); }
@@ -54,7 +56,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 /* ---------- Navbar ---------- */
 .fa-navbar {
     min-height: var(--nav-height);
-    background: rgba(255, 255, 255, 0.97);
+    background: rgba(240, 244, 241, 0.97);
     border-bottom: 1px solid var(--border);
     transition: box-shadow .2s ease;
 }
@@ -81,7 +83,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 /* ---------- Hero ---------- */
 .hero {
     padding: 4.5rem 0 5rem;
-    background: linear-gradient(180deg, var(--surface-light) 0%, var(--white) 100%);
+    background: linear-gradient(180deg, var(--surface-light) 0%, var(--surface-card) 100%);
 }
 .hero-badge {
     display: inline-flex; align-items: center; gap: 0.5rem;
@@ -114,7 +116,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
     transform: translate(-50%, -50%);
     width: 38%; padding: 1rem 0.5rem;
     display: flex; flex-direction: column; align-items: center; text-align: center;
-    background: var(--white); border: 1px solid var(--border);
+    background: var(--surface-card); border: 1px solid var(--border);
     border-radius: 20px; box-shadow: var(--shadow-md);
 }
 .pv-core img { width: 44px; height: auto; margin-bottom: 0.4rem; }
@@ -125,7 +127,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
     position: absolute; width: 34%;
     display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
     padding: 0.85rem 0.4rem;
-    background: var(--white); border: 1px solid var(--border);
+    background: var(--surface-card); border: 1px solid var(--border);
     border-radius: 14px; box-shadow: var(--shadow-sm);
     font-weight: 600; font-size: 0.85rem; text-align: center;
 }
@@ -160,7 +162,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 
 /* ---------- About ---------- */
 .system-card {
-    background: var(--white); border: 1px solid var(--border);
+    background: var(--surface-card); border: 1px solid var(--border);
     border-radius: 20px; padding: 2rem; box-shadow: var(--shadow-md);
 }
 .system-card__head { display: flex; align-items: center; gap: 1rem; padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
@@ -180,14 +182,14 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 .check-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.9rem; }
 .check-list li {
     display: flex; align-items: center; gap: 0.8rem;
-    background: var(--white); border: 1px solid var(--border);
+    background: var(--surface-card); border: 1px solid var(--border);
     border-radius: 12px; padding: 0.85rem 1.1rem; font-weight: 600;
 }
 .check-list i { color: var(--success); font-size: 1.15rem; }
 
 /* ---------- Core modules ---------- */
 .module-card {
-    height: 100%; background: var(--white);
+    height: 100%; background: var(--surface-card);
     border: 1px solid var(--border); border-radius: var(--radius);
     padding: 1.75rem; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
@@ -205,7 +207,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 /* ---------- Why FundAxis ---------- */
 .benefit-card {
     display: flex; align-items: center; gap: 0.9rem;
-    background: var(--white); border: 1px solid var(--border);
+    background: var(--surface-card); border: 1px solid var(--border);
     border-radius: 14px; padding: 1.1rem 1.2rem; font-weight: 600;
     transition: box-shadow .2s ease, border-color .2s ease;
 }
@@ -219,7 +221,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 /* ---------- How it works ---------- */
 .step-card {
     height: 100%; text-align: center;
-    background: var(--white); border: 1px solid var(--border);
+    background: var(--surface-card); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 2.25rem 1.75rem;
 }
 .step-num {
@@ -244,7 +246,7 @@ a:focus-visible, button:focus-visible, .btn:focus-visible {
 /* ---------- Footer ---------- */
 .fa-footer { background: var(--brand-green-dark); color: rgba(255, 255, 255, 0.75); padding: 4rem 0 1.5rem; }
 .footer-brand { display: flex; align-items: center; gap: 0.75rem; color: var(--white); font-size: 1.3rem; margin-bottom: 1rem; }
-.footer-logo { display: grid; place-items: center; width: 48px; height: 48px; background: var(--white); border-radius: 12px; }
+.footer-logo { display: grid; place-items: center; width: 48px; height: 48px; background: var(--surface-card); border-radius: 12px; }
 .footer-logo img { height: 32px; width: auto; }
 .footer-text { max-width: 340px; font-size: 0.95rem; }
 .fa-footer h4 { color: var(--white); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.04em; margin-bottom: 1rem; }

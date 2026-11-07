@@ -32,6 +32,7 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
 
     <meta charset="UTF-8">
 
@@ -97,7 +98,7 @@
             <a th:href="@{/admin/dashboard}"
                class="fa-brand-link">
 
-                <img th:src="@{/images/fundaxis-logo.png}"
+                <img th:src="@{/images/favicon.ico}"
                      alt="FundAxis"
                      class="fa-brand-logo">
 
@@ -168,7 +169,7 @@
 
 
                 <li>
-                    <a th:href="@{/admin/contributions}"
+                    <a th:href="@{/admin/contribution-workspace}"
                        class="fa-nav-link">
 
                         <i class="bi bi-piggy-bank"></i>
@@ -179,6 +180,7 @@
 
                     </a>
                 </li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
 
 
                 <li>

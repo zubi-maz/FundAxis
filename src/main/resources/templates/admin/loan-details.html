@@ -11,6 +11,7 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
@@ -23,7 +24,7 @@
     <!-- Shared FundAxis dashboard styles + the button / modal / table-footer / pagination styles from the Employee Management page -->
     <link th:href="@{/css/dashboard.css}" rel="stylesheet">
     <link th:href="@{/css/admin-employees.css}" rel="stylesheet">
-    <link th:href="@{/css/admin-loans.css}" rel="stylesheet">
+    <link th:href="@{/css/loans.css}" rel="stylesheet">
 </head>
 <body class="fa-body">
 
@@ -35,7 +36,7 @@
     <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
         <div class="fa-sidebar-brand">
             <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">
-                <img th:src="@{/images/fundaxis-logo.png}" alt="FundAxis" class="fa-brand-logo">
+                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
                 <span class="fa-brand-text">FundAxis</span>
             </a>
             <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">
@@ -53,7 +54,8 @@
             <p class="fa-nav-heading">Administration</p>
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>
-                <li><a th:href="@{/admin/contributions}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
                 <!-- Loans is the active item on this page -->
                 <li><a th:href="@{/admin/loans}" class="fa-nav-link active" aria-current="page"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>
                 <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>
@@ -205,19 +207,27 @@
                     </button>
 
                     <!-- APPROVE (under review + eligible) -->
-                    <button type="button" class="fa-btn fa-btn-primary" th:if="${isInReview and isEligible}"
+                    <button type="button" class="fa-btn fa-btn-primary" th:if="${isInReview and isEligible and loanApprovalEnabled and independentLoanReviewer}"
                             data-bs-toggle="modal" data-bs-target="#approveLoanModal">
                         <i class="bi bi-check2-circle" aria-hidden="true"></i> Approve Loan
                     </button>
 
                     <!-- REJECT (under review) -->
-                    <button type="button" class="fa-btn fa-btn-outline-danger" th:if="${isInReview}"
+                    <button type="button" class="fa-btn fa-btn-outline-danger" th:if="${isInReview and loanApprovalEnabled and independentLoanReviewer}"
                             data-bs-toggle="modal" data-bs-target="#rejectLoanModal">
                         <i class="bi bi-x-circle" aria-hidden="true"></i> Reject Loan
                     </button>
 
                     <!-- Cancel Loan and any later lifecycle actions are added in later steps. -->
                 </div>
+            </div>
+
+            <div class="alert alert-warning fa-alert" role="status"
+                 th:if="${isInReview and (!loanApprovalEnabled or !independentLoanReviewer)}">
+                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                <span th:if="${!loanApprovalEnabled}">Loan approval and rejection are disabled until independent checker authority and bank approval policy are approved and configured.</span>
+                <span th:if="${loanApprovalEnabled and loanCreatorMissing}">This legacy loan has no recorded creator. Independent approval or rejection cannot be verified.</span>
+                <span th:if="${loanApprovalEnabled and !loanCreatorMissing and !independentLoanReviewer}">The loan creator cannot approve or reject this application.</span>
             </div>
 
             <div class="fa-alerts" aria-live="polite">
@@ -284,12 +294,16 @@
                                 <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.employee.fullName != null ? loan.employee.fullName : '--'}">--</dd>
                             </div>
                             <div class="row py-3 border-bottom">
-                                <dt class="col-sm-5 fw-normal text-secondary">Email</dt>
-                                <dd class="col-sm-7 mb-0 fw-semibold text-break" th:text="${loan.employee.email != null ? loan.employee.email : '--'}">--</dd>
+                                <dt class="col-sm-5 fw-normal text-secondary">Designation</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.employee.employeeDesignation != null ? loan.employee.employeeDesignation : '--'}">--</dd>
                             </div>
                             <div class="row py-3 border-bottom">
-                                <dt class="col-sm-5 fw-normal text-secondary">Phone Number</dt>
-                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.employee.phoneNumber != null ? loan.employee.phoneNumber : '--'}">--</dd>
+                                <dt class="col-sm-5 fw-normal text-secondary">Fund Joining Date</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.employee.fundJoinDate != null ? #temporals.format(loan.employee.fundJoinDate, 'dd MMM yyyy') : '--'}">--</dd>
+                            </div>
+                            <div class="row py-3 border-bottom">
+                                <dt class="col-sm-5 fw-normal text-secondary">Fund Exit Date</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.employee.fundExitDate != null ? #temporals.format(loan.employee.fundExitDate, 'dd MMM yyyy') : 'Current member'}">--</dd>
                             </div>
                             <div class="row py-3">
                                 <dt class="col-sm-5 fw-normal text-secondary">Employee Status</dt>
@@ -337,8 +351,12 @@
                                 <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.interestRate != null ? #numbers.formatDecimal(loan.interestRate, 1, 'COMMA', 2, 'POINT') + '%' : '--'}">--</dd>
                             </div>
                             <div class="row py-3 border-bottom">
-                                <dt class="col-sm-5 fw-normal text-secondary">Tenure</dt>
+                                <dt class="col-sm-5 fw-normal text-secondary">Requested Tenure</dt>
                                 <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.tenureMonths != null ? loan.tenureMonths + (loan.tenureMonths == 1 ? ' month' : ' months') : '--'}">--</dd>
+                            </div>
+                            <div class="row py-3 border-bottom">
+                                <dt class="col-sm-5 fw-normal text-secondary">Approved Tenure</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.approvedTenureMonths != null ? loan.approvedTenureMonths + (loan.approvedTenureMonths == 1 ? ' month' : ' months') : (loan.approvedAmount != null ? 'Legacy / not captured' : 'Not approved')}">Not approved</dd>
                             </div>
                             <div class="row py-3 border-bottom">
                                 <dt class="col-sm-5 fw-normal text-secondary">Loan Purpose</dt>
@@ -369,6 +387,225 @@
                 </div>
             </div>
 
+            <!-- Reconciled loan/disbursement totals. Remaining capacity is not borrower principal outstanding. -->
+            <section class="row g-3 mb-3" aria-label="Loan financial summary">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="fa-card h-100 p-3"><div class="text-secondary small">Requested Amount</div>
+                        <strong th:text="${currency + ' ' + #numbers.formatDecimal(loan.requestedAmount, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="fa-card h-100 p-3"><div class="text-secondary small">Approved Amount</div>
+                        <strong th:text="${loan.approvedAmount != null ? currency + ' ' + #numbers.formatDecimal(loan.approvedAmount, 1, 'COMMA', 2, 'POINT') : 'Not approved'}">Not approved</strong></div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="fa-card h-100 p-3"><div class="text-secondary small">Completed Disbursements</div>
+                        <strong th:text="${currency + ' ' + #numbers.formatDecimal(totalDisbursed, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="fa-card h-100 p-3"><div class="text-secondary small">Remaining Disbursement Capacity</div>
+                        <strong th:text="${remainingApprovedAmount != null ? currency + ' ' + #numbers.formatDecimal(remainingApprovedAmount, 1, 'COMMA', 2, 'POINT') : 'Not available'}">Not available</strong>
+                        <div class="form-text">This is approved amount not yet released, not outstanding borrower principal.</div></div>
+                </div>
+            </section>
+
+            <section class="fa-card mb-3" aria-labelledby="repaymentScheduleTitle">
+                <div class="fa-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h2 class="fa-card-title mb-1" id="repaymentScheduleTitle">Repayment Schedule</h2>
+                        <p class="small text-secondary mb-0">Saved installment terms and settlement totals. No interest or amortization is generated automatically.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/admin/repayment-schedules/new(loanApplicationId=${loan.loanApplicationId},returnToLoanDetails=true)}"
+                           class="fa-btn fa-btn-primary fa-btn-sm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Installment</a>
+                        <a th:href="@{/admin/repayment-schedules(loanApplicationId=${loan.loanApplicationId})}"
+                           class="fa-btn fa-btn-outline fa-btn-sm">Schedule Register</a>
+                    </div>
+                </div>
+
+                <div class="px-3 px-md-4 pb-3">
+                    <div class="alert alert-warning py-2 mb-3" role="status" th:if="${!scheduleTotalsConsistent}">
+                        Schedule totals need review. One or more saved installments do not reconcile; historical values have not been changed.
+                    </div>
+                    <div class="row g-2 mb-3" th:if="${scheduleCount > 0}">
+                        <div class="col-6 col-lg-2"><div class="p-2 rounded bg-body-secondary h-100"><div class="small text-secondary">Scheduled Principal</div><strong th:text="${currency + ' ' + #numbers.formatDecimal(scheduledPrincipalTotal, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div></div>
+                        <div class="col-6 col-lg-2"><div class="p-2 rounded bg-body-secondary h-100"><div class="small text-secondary">Scheduled Interest</div><strong th:text="${currency + ' ' + #numbers.formatDecimal(scheduledInterestTotal, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div></div>
+                        <div class="col-6 col-lg-2"><div class="p-2 rounded bg-body-secondary h-100"><div class="small text-secondary">Installment Due</div><strong th:text="${currency + ' ' + #numbers.formatDecimal(scheduledInstallmentTotal, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div></div>
+                        <div class="col-6 col-lg-2"><div class="p-2 rounded bg-body-secondary h-100"><div class="small text-secondary">Installment Paid</div><strong th:text="${currency + ' ' + #numbers.formatDecimal(paidInstallmentTotal, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div></div>
+                        <div class="col-6 col-lg-2"><div class="p-2 rounded bg-body-secondary h-100"><div class="small text-secondary">Installment Remaining</div><strong th:text="${currency + ' ' + #numbers.formatDecimal(remainingInstallmentTotal, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div></div>
+                        <div class="col-6 col-lg-2"><div class="p-2 rounded bg-body-secondary h-100"><div class="small text-secondary">Outstanding Principal</div><strong>Not yet reconciled</strong></div></div>
+                    </div>
+                    <p class="small text-secondary" th:if="${scheduleCount > 0}">
+                        Paid and remaining amounts are installment-level cash reconciliation. Principal repaid and interest received are not separately confirmed by the existing payment records.
+                        The repayment basis for loans with phased disbursements is not configured, so scheduled principal is not reconciled to released principal here.
+                        <span th:text="${activeScheduleCount + ' active; ' + cancelledScheduleCount + ' cancelled'}">0 active; 0 cancelled</span>.
+                    </p>
+
+                    <div class="table-responsive" th:if="${!#lists.isEmpty(repaymentSchedules)}">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr>
+                                <th scope="col">No.</th><th scope="col">Due Date</th>
+                                <th scope="col" class="text-end">Principal</th><th scope="col" class="text-end">Interest</th>
+                                <th scope="col" class="text-end">Installment Due</th><th scope="col" class="text-end">Paid</th>
+                                <th scope="col" class="text-end">Remaining</th><th scope="col">Status</th><th scope="col">Actions</th>
+                            </tr></thead>
+                            <tbody>
+                            <tr th:each="schedule : ${repaymentSchedules}">
+                                <td th:text="${schedule.installmentNumber != null ? schedule.installmentNumber : '--'}">1</td>
+                                <td th:text="${schedule.dueDate != null ? #temporals.format(schedule.dueDate, 'dd MMM yyyy') : '--'}">01 Jan 2026</td>
+                                <td class="text-end" th:text="${schedule.principalAmount != null ? currency + ' ' + #numbers.formatDecimal(schedule.principalAmount, 1, 'COMMA', 2, 'POINT') : '--'}">BDT 0.00</td>
+                                <td class="text-end" th:text="${schedule.interestAmount != null ? currency + ' ' + #numbers.formatDecimal(schedule.interestAmount, 1, 'COMMA', 2, 'POINT') : '--'}">BDT 0.00</td>
+                                <td class="text-end" th:text="${schedule.totalInstallmentAmount != null ? currency + ' ' + #numbers.formatDecimal(schedule.totalInstallmentAmount, 1, 'COMMA', 2, 'POINT') : '--'}">BDT 0.00</td>
+                                <td class="text-end" th:text="${schedule.paidAmount != null ? currency + ' ' + #numbers.formatDecimal(schedule.paidAmount, 1, 'COMMA', 2, 'POINT') : '--'}">BDT 0.00</td>
+                                <td class="text-end" th:text="${schedule.remainingAmount != null ? currency + ' ' + #numbers.formatDecimal(schedule.remainingAmount, 1, 'COMMA', 2, 'POINT') : '--'}">BDT 0.00</td>
+                                <td><span class="fa-status"
+                                          th:classappend="${schedule.installmentStatus == T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).PAID} ? 'fa-status-success' : (${schedule.installmentStatus == T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).OVERDUE} ? 'fa-status-danger' : (${schedule.installmentStatus == T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).CANCELLED} ? 'fa-status-neutral' : 'fa-status-info'))"
+                                          th:text="${schedule.installmentStatus}">PENDING</span></td>
+                                <td class="text-nowrap">
+                                    <a th:href="@{/admin/repayment-schedules/{id}(id=${schedule.id})}" class="fa-btn fa-btn-outline fa-btn-sm">Details</a>
+                                    <a th:if="${schedule.installmentStatus != T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).CANCELLED and schedule.installmentStatus != T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).PAID}"
+                                       th:href="@{/admin/repayments/new(loanApplicationId=${loan.loanApplicationId},installmentNumber=${schedule.installmentNumber})}"
+                                       class="fa-btn fa-btn-primary fa-btn-sm">Record Repayment</a>
+                                    <a th:if="${schedule.installmentStatus == T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).PENDING}"
+                                       th:href="@{/admin/repayment-schedules/{id}/edit(id=${schedule.id})}" class="fa-btn fa-btn-outline fa-btn-sm">Edit</a>
+                                    <form class="d-inline" method="post" th:if="${(schedule.installmentStatus == T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).PENDING or schedule.installmentStatus == T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).PARTIAL) and schedule.dueDate != null and schedule.dueDate.isBefore(scheduleToday) and schedule.remainingAmount != null and schedule.remainingAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+                                          th:action="@{/admin/repayment-schedules/{id}/mark-overdue(id=${schedule.id})}">
+                                        <button type="submit" class="fa-btn fa-btn-outline fa-btn-sm">Mark Overdue</button>
+                                    </form>
+                                    <form class="d-inline" method="post" th:if="${schedule.installmentStatus == T(com.fundaxis.entity.RepaymentSchedule.InstallmentStatus).PENDING and schedule.paidAmount != null and schedule.paidAmount.compareTo(T(java.math.BigDecimal).ZERO) == 0}"
+                                          th:action="@{/admin/repayment-schedules/{id}/cancel(id=${schedule.id})}">
+                                        <button type="submit" class="fa-btn fa-btn-outline fa-btn-sm">Cancel</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-secondary py-2" th:if="${#lists.isEmpty(repaymentSchedules)}">No repayment installments have been recorded for this loan.</div>
+                </div>
+            </section>
+
+            <section class="fa-card mb-3" aria-labelledby="repaymentHistoryTitle">
+                <div class="fa-card-header">
+                    <h2 class="fa-card-title mb-1" id="repaymentHistoryTitle">Repayment History</h2>
+                    <p class="small text-secondary mb-0">Entries are shown by their existing ledger. Reconciliation compares completed entries with the saved installment balances; it does not infer principal or interest allocation.</p>
+                </div>
+                <div class="px-3 px-md-4 pt-3">
+                    <div class="alert alert-success py-2" role="status" th:if="${repaymentLedgerReconciled}">
+                        Completed repayment records reconcile to the saved schedule paid total.
+                    </div>
+                    <div class="alert alert-warning py-2" role="status" th:if="${!repaymentLedgerReconciled and !duplicateCrossLedgerReference}">
+                        Repayment ledger and installment totals do not reconcile. Review both ledgers before settlement or closure.
+                    </div>
+                    <div class="alert alert-danger py-2" role="alert" th:if="${duplicateCrossLedgerReference}">
+                        A payment reference appears in both repayment ledgers. Treat the loan as unreconciled until the source receipt is reviewed.
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-6"><div class="p-2 rounded bg-body-secondary"><span class="small text-secondary">Completed repayment ledger total</span><br><strong th:text="${currency + ' ' + #numbers.formatDecimal(repaymentLedgerTotal, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</strong></div></div>
+                        <div class="col-sm-6"><div class="p-2 rounded bg-body-secondary"><span class="small text-secondary">Settlement readiness</span><br><strong th:text="${loanClosureReadiness}">Not reconciled</strong></div></div>
+                    </div>
+                    <div class="alert alert-secondary py-2" role="status">
+                        Principal/interest allocation is not recorded per payment. Late-fee policy is not configured; no fee is assessed or reported as zero.
+                    </div>
+                    <div class="table-responsive mb-3" th:if="${!#lists.isEmpty(directRepayments)}">
+                        <h3 class="h6">Repayments ledger (completed and reversal audit)</h3>
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr><th>Date</th><th>Reference</th><th>Method</th><th class="text-end">Amount</th><th>Status</th><th>Recorded By</th><th>Reversal</th></tr></thead>
+                            <tbody><tr th:each="payment : ${directRepayments}">
+                                <td th:text="${payment.repaymentDate != null ? #temporals.format(payment.repaymentDate, 'dd MMM yyyy') : '--'}">--</td>
+                                <td th:text="${payment.referenceNumber}">--</td>
+                                <td th:text="${payment.paymentMethod}">--</td>
+                                <td class="text-end" th:text="${payment.repaymentAmount != null ? currency + ' ' + #numbers.formatDecimal(payment.repaymentAmount, 1, 'COMMA', 2, 'POINT') : '--'}">--</td>
+                                <td th:text="${payment.repaymentStatus}">--</td>
+                                <td th:text="${payment.recordedBy != null ? payment.recordedBy : '--'}">--</td>
+                                <td><span th:if="${payment.repaymentStatus == T(com.fundaxis.entity.Repayment.RepaymentStatus).REVERSED}" th:text="${(payment.reversalDate != null ? #temporals.format(payment.reversalDate, 'dd MMM yyyy') : 'Date unavailable') + ' · ' + (payment.reversalReason != null ? payment.reversalReason : 'Reason unavailable') + ' · ' + (payment.reversedBy != null ? payment.reversedBy : 'User unavailable')}">--</span><span th:unless="${payment.repaymentStatus == T(com.fundaxis.entity.Repayment.RepaymentStatus).REVERSED}">--</span></td>
+                            </tr></tbody>
+                        </table>
+                    </div>
+                    <div class="table-responsive mb-3" th:if="${!#lists.isEmpty(workflowRepayments)}">
+                        <h3 class="h6">Repayment workflow ledger</h3>
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr><th>Date</th><th>Reference</th><th>Method</th><th class="text-end">Amount</th><th>Status</th><th>Processed By</th><th>Processing Date</th></tr></thead>
+                            <tbody><tr th:each="payment : ${workflowRepayments}">
+                                <td th:text="${payment.repaymentDate != null ? #temporals.format(payment.repaymentDate, 'dd MMM yyyy') : '--'}">--</td>
+                                <td th:text="${payment.referenceNumber}">--</td>
+                                <td th:text="${payment.paymentMethod}">--</td>
+                                <td class="text-end" th:text="${payment.repaymentAmount != null ? currency + ' ' + #numbers.formatDecimal(payment.repaymentAmount, 1, 'COMMA', 2, 'POINT') : '--'}">--</td>
+                                <td th:text="${payment.repaymentStatus}">--</td>
+                                <td th:text="${payment.processedBy != null ? payment.processedBy : '--'}">--</td>
+                                <td th:text="${payment.processingDate != null ? #temporals.format(payment.processingDate, 'dd MMM yyyy') : '--'}">--</td>
+                            </tr></tbody>
+                        </table>
+                    </div>
+                    <p class="text-secondary mb-3" th:if="${#lists.isEmpty(directRepayments) and #lists.isEmpty(workflowRepayments)}">No repayment transaction records are linked to this loan.</p>
+                </div>
+            </section>
+
+            <section class="fa-card mb-3" aria-labelledby="guarantorInfoTitle">
+                <div class="fa-card-header"><h2 class="fa-card-title" id="guarantorInfoTitle">Guarantor Information</h2></div>
+                <dl class="mb-0 px-3 px-md-4" th:if="${loan.guarantorEmployee != null}">
+                    <div class="row py-3 border-bottom"><dt class="col-sm-4 fw-normal text-secondary">Employee ID</dt><dd class="col-sm-8 mb-0 fw-semibold" th:text="${loan.guarantorEmployee.employeeId}">--</dd></div>
+                    <div class="row py-3 border-bottom"><dt class="col-sm-4 fw-normal text-secondary">Full Name</dt><dd class="col-sm-8 mb-0 fw-semibold" th:text="${loan.guarantorEmployee.fullName}">--</dd></div>
+                    <div class="row py-3 border-bottom"><dt class="col-sm-4 fw-normal text-secondary">Designation</dt><dd class="col-sm-8 mb-0 fw-semibold" th:text="${loan.guarantorEmployee.employeeDesignation}">--</dd></div>
+                    <div class="row py-3"><dt class="col-sm-4 fw-normal text-secondary">Status</dt><dd class="col-sm-8 mb-0 fw-semibold" th:text="${loan.guarantorEmployee.employeeStatus}">--</dd></div>
+                </dl>
+                <dl class="mb-0 px-3 px-md-4" th:if="${loan.guarantorEmployee == null and loan.legacyGuarantorName != null}">
+                    <div class="row py-3"><dt class="col-sm-4 fw-normal text-secondary">Historical / External Name</dt><dd class="col-sm-8 mb-0 fw-semibold" th:text="${loan.legacyGuarantorName}">--</dd></div>
+                </dl>
+                <p class="text-secondary px-3 px-md-4 pb-3 mb-0" th:if="${loan.guarantorEmployee == null and (loan.legacyGuarantorName == null or #strings.isEmpty(loan.legacyGuarantorName))}">No guarantor recorded.</p>
+            </section>
+
+            <section class="fa-card mb-3" aria-labelledby="loanExtensionsTitle">
+                <div class="fa-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h2 class="fa-card-title mb-1" id="loanExtensionsTitle">Loan Extensions</h2>
+                        <p class="small text-secondary mb-0">Current approved tenure is shown in Loan Overview. Extension records do not rewrite existing installments.</p>
+                    </div>
+                    <a class="fa-btn fa-btn-outline fa-btn-sm" th:href="@{/admin/loan-extensions}">Extension Register</a>
+                </div>
+                <div class="px-3 px-md-4 pb-3">
+                    <div class="alert alert-info py-2" role="status" th:if="${!#lists.isEmpty(pendingLoanExtensions)}">
+                        <span th:text="${#lists.size(pendingLoanExtensions) + ' extension request(s) awaiting review.'}">Extension request awaiting review.</span>
+                    </div>
+                    <div class="table-responsive" th:if="${!#lists.isEmpty(loanExtensions)}">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr><th>Request Date</th><th>Current End Date</th><th>Requested End Date</th><th class="text-end">Additional Months</th><th>Status</th><th>Approved By</th><th>Action</th></tr></thead>
+                            <tbody><tr th:each="extension : ${loanExtensions}">
+                                <td th:text="${extension.requestDate != null ? #temporals.format(extension.requestDate, 'dd MMM yyyy') : '--'}">--</td>
+                                <td th:text="${extension.originalEndDate != null ? #temporals.format(extension.originalEndDate, 'dd MMM yyyy') : '--'}">--</td>
+                                <td th:text="${extension.requestedEndDate != null ? #temporals.format(extension.requestedEndDate, 'dd MMM yyyy') : '--'}">--</td>
+                                <td class="text-end" th:text="${extension.extensionMonths != null ? extension.extensionMonths : '--'}">--</td>
+                                <td th:text="${extension.extensionStatus}">--</td>
+                                <td th:text="${extension.approvedBy != null ? extension.approvedBy : '--'}">--</td>
+                                <td><a class="fa-btn fa-btn-outline fa-btn-sm" th:href="@{/admin/loan-extensions/{id}(id=${extension.id})}">View</a></td>
+                            </tr></tbody>
+                        </table>
+                    </div>
+                    <p class="text-secondary mb-0" th:if="${#lists.isEmpty(loanExtensions)}">No extension requests are recorded for this loan.</p>
+                </div>
+            </section>
+
+            <section class="fa-card mb-3" aria-labelledby="loanDisbursementHistoryTitle">
+                <div class="fa-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h2 class="fa-card-title mb-0" id="loanDisbursementHistoryTitle">Disbursement History</h2>
+                    <a th:href="@{/admin/disbursements(keyword=${loan.loanApplicationId})}" class="fa-btn fa-btn-outline fa-btn-sm">View Disbursement Register</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th scope="col">Reference</th><th scope="col" class="text-end">Amount</th><th scope="col">Method</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Processed By</th></tr></thead>
+                        <tbody>
+                        <tr th:each="item : ${loanDisbursements}">
+                            <td><a th:if="${item.referenceNumber != null}" th:href="@{/admin/disbursements/{id}(id=${item.id})}" th:text="${item.referenceNumber}">Reference</a><span th:if="${item.referenceNumber == null}" th:text="${'Pending #' + item.id}">Pending</span></td>
+                            <td class="text-end" th:text="${currency + ' ' + #numbers.formatDecimal(item.disbursementAmount, 1, 'COMMA', 2, 'POINT')}">BDT 0.00</td>
+                            <td th:text="${item.paymentMethod != null ? #strings.replace(#strings.toLowerCase(item.paymentMethod), '_', ' ') : '--'}">--</td>
+                            <td th:text="${item.disbursementDate != null ? #temporals.format(item.disbursementDate, 'dd MMM yyyy') : '--'}">--</td>
+                            <td th:text="${item.disbursementStatus}">PENDING</td><td th:text="${item.processedBy != null ? item.processedBy : '--'}">--</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(loanDisbursements)}"><td colspan="6" class="text-secondary text-center py-4">No disbursement records for this loan.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Dates & audit information (read-only) -->
             <section class="fa-card mb-3" aria-labelledby="faAuditTitle">
                 <div class="fa-card-header">
@@ -385,8 +622,20 @@
                                 <dt class="col-sm-5 fw-normal text-secondary">Approval Date</dt>
                                 <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.approvalDate != null ? #temporals.format(loan.approvalDate, 'dd MMM yyyy') : '--'}">--</dd>
                             </div>
+                            <div class="row py-3 border-top">
+                                <dt class="col-sm-5 fw-normal text-secondary">Approved By</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.approvedBy != null ? loan.approvedBy : '--'}">--</dd>
+                            </div>
+                            <div class="row py-3">
+                                <dt class="col-sm-5 fw-normal text-secondary">Approval Timestamp</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.approvedAt != null ? #temporals.format(loan.approvedAt, 'dd MMM yyyy, HH:mm:ss') : '--'}">--</dd>
+                            </div>
                         </div>
                         <div class="col-12 col-xl-6">
+                            <div class="row py-3 border-bottom">
+                                <dt class="col-sm-5 fw-normal text-secondary">Created By</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.createdBy != null ? loan.createdBy : 'Legacy record — not captured'}">--</dd>
+                            </div>
                             <div class="row py-3 border-bottom">
                                 <dt class="col-sm-5 fw-normal text-secondary">Created At</dt>
                                 <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.createdAt != null ? #temporals.format(loan.createdAt, 'dd MMM yyyy, HH:mm') : '--'}">--</dd>
@@ -394,6 +643,14 @@
                             <div class="row py-3">
                                 <dt class="col-sm-5 fw-normal text-secondary">Updated At</dt>
                                 <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.updatedAt != null ? #temporals.format(loan.updatedAt, 'dd MMM yyyy, HH:mm') : '--'}">--</dd>
+                            </div>
+                            <div class="row py-3 border-top">
+                                <dt class="col-sm-5 fw-normal text-secondary">Rejected By</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.rejectedBy != null ? loan.rejectedBy : '--'}">--</dd>
+                            </div>
+                            <div class="row py-3">
+                                <dt class="col-sm-5 fw-normal text-secondary">Rejection Timestamp</dt>
+                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${loan.rejectedAt != null ? #temporals.format(loan.rejectedAt, 'dd MMM yyyy, HH:mm:ss') : '--'}">--</dd>
                             </div>
                         </div>
                     </div>
@@ -518,7 +775,7 @@
 
             <!-- Approve Loan (UNDER_REVIEW + ELIGIBLE only; POST with CSRF token via th:action).
                  Posts "approvedAmount" and "interestRate"; the backend validates both and sets APPROVED + approval date. -->
-            <div class="modal fade" id="approveLoanModal" tabindex="-1" aria-labelledby="approveLoanTitle" aria-describedby="approveLoanDesc" aria-hidden="true" th:if="${isInReview and isEligible}">
+            <div class="modal fade" id="approveLoanModal" tabindex="-1" aria-labelledby="approveLoanTitle" aria-describedby="approveLoanDesc" aria-hidden="true" th:if="${isInReview and isEligible and loanApprovalEnabled and independentLoanReviewer}">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <form method="post" th:action="@{/admin/loans/{loanApplicationId}/approve(loanApplicationId=${loan.loanApplicationId})}">
@@ -553,6 +810,16 @@
                                            th:value="${loan.requestedAmount}" aria-describedby="approvedAmountHelp">
                                     <div class="form-text" id="approvedAmountHelp">Amount in <span th:text="${currency}">BDT</span>, minimum 0.01. Pre-filled with the requested amount.</div>
                                 </div>
+                                <div class="mb-3">
+                                    <label for="approvedTenureMonths" class="fa-label">Approved Tenure (Months)
+                                        <span class="text-danger" aria-hidden="true">*</span>
+                                    </label>
+                                    <input type="number" id="approvedTenureMonths" name="approvedTenureMonths" class="form-control fa-input"
+                                           step="1" min="1" inputmode="numeric" required
+                                           th:value="${loan.approvedTenureMonths != null ? loan.approvedTenureMonths : loan.tenureMonths}"
+                                           aria-describedby="approvedTenureHelp">
+                                    <div class="form-text" id="approvedTenureHelp">Initial value matches the requested term; the authorized reviewer records the approved term.</div>
+                                </div>
                                 <div>
                                     <label for="approveInterestRate" class="fa-label">Interest Rate (%)
                                         <span class="text-danger" aria-hidden="true">*</span>
@@ -574,7 +841,7 @@
             </div>
 
             <!-- Reject Loan (UNDER_REVIEW only; POST with CSRF token via th:action). Posts "rejectionReason". -->
-            <div class="modal fade" id="rejectLoanModal" tabindex="-1" aria-labelledby="rejectLoanTitle" aria-describedby="rejectLoanDesc" aria-hidden="true" th:if="${isInReview}">
+            <div class="modal fade" id="rejectLoanModal" tabindex="-1" aria-labelledby="rejectLoanTitle" aria-describedby="rejectLoanDesc" aria-hidden="true" th:if="${isInReview and loanApprovalEnabled and independentLoanReviewer}">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <form method="post" th:action="@{/admin/loans/{loanApplicationId}/reject(loanApplicationId=${loan.loanApplicationId})}">

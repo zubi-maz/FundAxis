@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"><body>
+<section th:fragment="memberFundOperationsPanel" class="cs-tab-panel mfo-workspace" aria-labelledby="mfo-title">
+  <header class="mfo-heading"><div><p class="mfo-eyebrow">DAILY MEMBER OPERATIONS</p><h2 id="mfo-title">Member Fund Operations</h2><p>Manage employee shares, monthly contributions, and payments in one place.</p></div><a class="cs-btn cs-btn-outline" th:href="@{/admin/contribution-workspace(tab='monthly-records',year=${year},month=${month})}">Detailed Monthly Report</a></header>
+  <form class="cs-card mfo-context" method="get" th:action="@{/admin/contribution-workspace}" id="mfo-context">
+    <input type="hidden" name="tab" value="member-operations">
+    <input type="hidden" name="contextApplied" value="1">
+    <div class="mfo-context-heading"><h3>Employee &amp; Reporting Context</h3></div>
+    <fieldset class="mfo-context-primary"><legend class="visually-hidden">Employee and reporting period</legend>
+      <div><label for="mfo-employee">Business Employee ID</label><input class="cs-form-control" id="mfo-employee" name="employeeId" th:value="${employeeId}" placeholder="Optional: EMP-1476 or 1476" maxlength="80" autocomplete="off"></div>
+      <div><label for="mfo-name">Employee name</label><input class="cs-form-control" id="mfo-name" name="employeeName" th:value="${employeeName}" placeholder="Optional name filter" maxlength="150"></div>
+      <div><label for="mfo-year">Year</label><input class="cs-form-control" type="number" id="mfo-year" name="year" min="1900" max="9999" th:value="${year}" required></div>
+      <div><label for="mfo-month">Month</label><select class="cs-form-select" id="mfo-month" name="month"><option th:each="m:${#numbers.sequence(1,12)}" th:value="${m}" th:selected="${m == month}" th:text="${T(java.time.Month).of(m).getDisplayName(T(java.time.format.TextStyle).FULL,T(java.util.Locale).ENGLISH)}"></option></select></div>
+    </fieldset>
+    <fieldset class="mfo-context-secondary"><legend class="visually-hidden">Record filters and actions</legend>
+      <div><label for="mfo-status">Contribution status</label><select class="cs-form-select" id="mfo-status" name="status"><option th:each="s:${#strings.arraySplit('ALL,PENDING,PAID,CANCELED',',')}" th:value="${s}" th:selected="${s == operationStatus}" th:text="${s}"></option></select></div>
+      <div><label for="mfo-size">Rows</label><select class="cs-form-select" id="mfo-size" name="size"><option value="10" th:selected="${operationPage != null and operationPage.size == 10}">10</option><option value="25" th:selected="${operationPage != null and operationPage.size == 25}">25</option><option value="50" th:selected="${operationPage != null and operationPage.size == 50}">50</option><option value="100" th:selected="${operationPage != null and operationPage.size == 100}">100</option></select></div>
+      <div class="mfo-actions"><button class="cs-btn cs-btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i> Apply Context</button><a class="cs-btn cs-btn-outline" th:href="@{/admin/contribution-workspace(tab='member-operations',year=${year},month=${month})}">Clear</a></div>
+    </fieldset>
+  </form>
+  <p class="mfo-context-feedback" id="mfo-context-feedback" role="status" th:if="${param.contextApplied != null and operationError == null}"><i class="bi bi-check-circle" aria-hidden="true"></i> Context applied &mdash; <span th:text="${#temporals.format(selectedMonth,'MMMM yyyy')}"></span> &middot; <span th:text="${foundEmployee != null ? foundEmployee.employeeId : 'All matching employees'}"></span> &middot; Status: <span th:text="${operationStatus}"></span></p>
+  <p class="alert alert-danger" role="alert" th:if="${operationError != null}" th:text="${operationError}"></p>
+  <div class="mfo-candidates" th:if="${operationCandidates != null and !#lists.isEmpty(operationCandidates)}"><strong>Select a matching employee</strong><a class="cs-btn cs-btn-outline cs-btn-sm" th:each="e:${operationCandidates}" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${e.employeeId},year=${year},month=${month},status=${operationStatus})}" th:text="|${e.employeeId} - ${e.fullName}|"></a></div>
+  <section class="cs-card mfo-member" th:if="${foundEmployee != null}" aria-label="Selected employee">
+    <div class="mfo-member-heading"><div><p class="mfo-eyebrow" th:text="${foundEmployee.employeeId}"></p><h3 th:text="${foundEmployee.fullName}"></h3><p><span th:text="${foundEmployee.employeeDesignation}"></span> &middot; Fund joined <span th:text="${foundEmployee.fundJoinDate != null ? #temporals.format(foundEmployee.fundJoinDate,'dd MMM yyyy') : 'Not recorded'}"></span></p></div><span class="cs-status mfo-employee-status" th:classappend="${foundEmployee.employeeStatus.name() == 'ACTIVE' ? 'mfo-employee-status-active' : 'mfo-employee-status-inactive'}" th:text="${foundEmployee.employeeStatus}"></span></div>
+    <div class="mfo-metrics">
+      <div><span>OLD / NEW shares</span><strong th:text="${historicalShares != null ? historicalShares.oldShares + ' / ' + historicalShares.newShares : 'Unavailable'}"></strong><small>Quantities effective for the selected month</small></div>
+      <div><span>Expected Monthly Contribution</span><strong th:text="${historicalShares == null ? 'Unavailable' : (historicalShares.totalShares() == 0 ? 'No record' : 'BDT ' + #numbers.formatDecimal(historicalExpected,1,'COMMA',2,'POINT'))}"></strong><small>Calculated from applicable share quantities and monthly rates.</small></div>
+      <div><span>Recorded monthly due</span><strong th:text="${operationSummary != null and !#lists.isEmpty(operationSummary.contributions) ? 'BDT ' + #numbers.formatDecimal(operationSummary.expected,1,'COMMA',2,'POINT') : 'No record'}"></strong><small>Stored eligible obligations</small></div>
+      <div><span>Net cash received</span><strong th:text="${operationSummary != null ? 'BDT ' + #numbers.formatDecimal(operationSummary.collected,1,'COMMA',2,'POINT') : 'Unavailable'}"></strong><small>Active direct payments only</small></div>
+      <div><span>Applied member credit</span><strong th:text="${operationSummary != null ? 'BDT ' + #numbers.formatDecimal(operationSummary.creditApplied,1,'COMMA',2,'POINT') : 'Unavailable'}"></strong><small>Internal settlement, separate from cash</small></div>
+      <div><span>Outstanding</span><strong th:text="${operationSummary != null and !#lists.isEmpty(operationSummary.contributions) ? 'BDT ' + #numbers.formatDecimal(operationSummary.outstanding,1,'COMMA',2,'POINT') : 'No record'}"></strong><small>Due less cash and applied credit</small></div>
+    </div>
+    <p class="alert alert-warning" th:if="${historicalSharesError != null}" th:text="${historicalSharesError}"></p>
+    <div class="mfo-actions"><button type="button" class="cs-btn cs-btn-primary" data-bs-toggle="offcanvas" data-bs-target="#mfo-allocate">Allocate Shares</button><a class="cs-btn cs-btn-primary" href="#mfo-portfolio">Manage Holdings</a><button type="button" class="cs-btn cs-btn-primary" data-bs-toggle="offcanvas" data-bs-target="#mfo-payment">Manage Payment</button><a class="cs-btn cs-btn-primary" href="#mfo-credit-overview">Member Credit</a></div>
+  </section>
+  <section class="cs-card mfo-portfolio-management" th:if="${foundEmployee != null}" id="mfo-portfolio" aria-labelledby="mfo-portfolio-title"><div class="cs-card-header"><div><h3 class="cs-card-title" id="mfo-portfolio-title">Share Portfolio &amp; Holding Management</h3><p class="mfo-portfolio-subtitle">View share holdings, valuations, adjustment actions and historical transactions in one place.</p></div><span class="cs-muted">Current balances and rates</span></div><div class="cs-card-body"><h4 class="mfo-section-title">Current Share Holdings</h4><p class="cs-empty" th:if="${holdings == null or #lists.isEmpty(holdings)}">No share holdings found for this employee. Use Allocate Shares to create an eligible holding.</p><div class="cs-table-wrap" th:if="${holdings != null and !#lists.isEmpty(holdings)}"><label class="cs-form-label" for="mfo-holding-search">Filter current holdings</label><input class="cs-form-control mb-3" id="mfo-holding-search" type="search" data-cs-search="holdingsTable" placeholder="OLD or NEW"><table class="cs-table" id="holdingsTable">
+                                                <thead>
+                                                    <tr>
+                                                        
+                                                        <th>Share Category</th>
+                                                        <th class="cs-amount">Share Quantity</th>
+                                                        <th class="cs-amount">Monthly Contribution Rate (BDT)</th>
+                                                        <th class="cs-amount">Current Calculated Monthly Contribution (BDT)</th>
+                                                        
+                                                        
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+
+                                                    <tr
+                                                        th:each="h:${holdings}"
+                                                        class="cs-holding-row"
+                                                        th:attr="data-monthly-contribution=${h.expectedMonthlyContribution}">
+                                                        
+                                                        <td><span class="cs-status cs-status-neutral" th:text="${h.shareCategory}"></span><span class="cs-status cs-status-pending mfo-scheduled-badge" th:if="${h.allocationDate != null and h.allocationDate.isAfter(today)}">SCHEDULED</span><small class="d-block" th:if="${h.allocationDate != null and h.allocationDate.isAfter(today)}" th:text="|Effective ${#temporals.format(h.allocationDate,'dd MMM yyyy')}|"></small></td>
+                                                        <td class="cs-amount" th:text="${h.shareQuantity}"></td>
+                                                        <td
+                                                            class="cs-amount"
+                                                            th:text="${#numbers.formatDecimal(h.monthlyRatePerShare,1,'COMMA',2,'POINT')}"></td>
+                                                        <td
+                                                            class="cs-amount"
+                                                            th:text="${#numbers.formatDecimal(h.expectedMonthlyContribution,1,'COMMA',2,'POINT')}"></td>
+                                                        
+                                                        
+                                                        <td>
+
+                                                            <div class="mfo-row-actions"><a class="cs-btn cs-btn-outline cs-btn-sm" th:href="|#mfo-holding-${h.id}|">View holding actions</a></div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                                <tfoot>
+
+                                                    <tr class="cs-holdings-total-row">
+                                                        <td colspan="3">TOTAL EXPECTED MONTHLY CONTRIBUTION</td>
+                                                        <td class="cs-amount" id="holdingsMonthlyTotal" th:text="${#numbers.formatDecimal(currentHoldingRateTotal,1,'COMMA',2,'POINT')}"></td>
+                                                        <td colspan="1"></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table></div><details class="mfo-history mfo-reference-history" th:if="${holdings != null and !#lists.isEmpty(holdings)}"><summary>Share Valuation &amp; Holding References</summary><div class="cs-table-wrap"><table class="cs-table"><thead><tr><th>Share Category</th><th>Holding Reference</th><th class="cs-amount">Value per Share &middot; BDT</th><th class="cs-amount">Total Share Value &middot; BDT</th></tr></thead><tbody><tr th:each="h:${holdings}"><td th:text="${h.shareCategory}"></td><td th:text="${h.id}"></td><td class="cs-amount" th:text="${h.shareValuePerShare != null ? #numbers.formatDecimal(h.shareValuePerShare,1,'COMMA',2,'POINT') : 'Not recorded'}"></td><td class="cs-amount" th:text="${h.totalShareValue != null ? #numbers.formatDecimal(h.totalShareValue,1,'COMMA',2,'POINT') : 'Not recorded'}"></td></tr></tbody></table></div></details><h4 class="mfo-section-title mfo-holding-management-heading" th:if="${holdings != null and !#lists.isEmpty(holdings)}">Holding Management Actions &amp; History</h4>
+   <div class="mfo-holding-management" th:each="holding:${holdings}" th:if="${foundEmployee != null}" th:attr="data-share-category=${holding.shareCategory},id=|mfo-holding-${holding.id}|">
+     <div class="mfo-holding-header"><h5 class="mfo-holding-title"><span class="cs-status cs-status-neutral" th:text="${holding.shareCategory}"></span> Shares</h5><span class="cs-muted" th:text="|Current Quantity: ${holding.shareQuantity}|"></span></div>
+     <div class="mfo-holding-body">
+       <div class="mfo-actions mfo-holding-actions" aria-label="Holding management actions">
+         <a class="cs-btn cs-btn-primary" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},holdingId=${holding.id},year=${year},month=${month},status=${operationStatus},mfoAction='adjust')}">Adjust Share Quantity</a>
+         <a class="cs-btn cs-btn-primary" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},holdingId=${holding.id},year=${year},month=${month},status=${operationStatus},mfoAction='rate')}">Change Monthly Rate</a>
+         <a class="cs-btn cs-btn-primary" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},holdingId=${holding.id},year=${year},month=${month},status=${operationStatus},mfoAction='value')}">Change Share Value</a>
+       </div>
+        <details class="mfo-history" th:attr="id=|mfo-quantity-history-${holding.id}|"><summary>Quantity Transactions</summary>
+         <p class="cs-empty" th:if="${#lists.isEmpty(shareHistoryByHolding.get(holding.id))}">No quantity transactions recorded for this holding.</p>
+         <div class="cs-table-wrap" th:if="${!#lists.isEmpty(shareHistoryByHolding.get(holding.id))}"><table class="cs-table"><thead><tr><th>Recorded Date</th><th>Effective Date</th><th>Transaction Type</th><th class="cs-amount">Quantity Before</th><th class="cs-amount">Quantity Change</th><th class="cs-amount">Quantity After</th><th>Recorded By</th><th>Reason</th></tr></thead><tbody>
+           <tr th:each="t:${shareHistoryByHolding.get(holding.id)}"><td th:text="${t.createdAt != null ? #temporals.format(t.createdAt, 'dd MMM yyyy') : 'N/A'}"></td><td th:text="${t.effectiveDate != null ? #temporals.format(t.effectiveDate, 'dd MMM yyyy') : 'N/A'}"></td><td th:text="${#strings.replace(t.transactionType.name(),'_',' ')}"></td><td class="cs-amount" th:text="${t.quantityBefore}"></td><td class="cs-amount" th:text="${t.quantityChange > 0 ? '+' + t.quantityChange : t.quantityChange}"></td><td class="cs-amount" th:text="${t.quantityAfter}"></td><td th:text="${t.recordedBy != null ? t.recordedBy : 'Legacy record'}"></td><td th:text="${t.reason != null ? t.reason : 'Not recorded'}"></td></tr>
+         </tbody></table></div>
+       </details>
+        <details class="mfo-history" th:attr="id=|mfo-rate-history-${holding.id}|"><summary>Historical Rates</summary>
+         <p class="cs-empty" th:if="${#lists.isEmpty(rateHistoryByHolding.get(holding.id))}">No historical rate changes recorded for this holding.</p>
+          <div class="cs-table-wrap" th:if="${!#lists.isEmpty(rateHistoryByHolding.get(holding.id))}"><table class="cs-table"><thead><tr><th>Effective Date</th><th class="cs-amount">Rate (BDT)</th><th>Recorded At</th><th>Recorded By</th><th>Reason</th></tr></thead><tbody>
+            <tr th:each="r:${rateHistoryByHolding.get(holding.id)}"><td th:text="${r.effectiveDate != null ? #temporals.format(r.effectiveDate, 'dd MMM yyyy') : 'N/A'}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(r.monthlyRatePerShare,1,'COMMA',2,'POINT')}"></td><td th:text="${r.createdAt != null ? #temporals.format(r.createdAt,'dd MMM yyyy HH:mm') : 'N/A'}"></td><td th:text="${r.recordedBy != null ? r.recordedBy : 'Legacy record'}"></td><td th:text="${r.reason}"></td></tr>
+         </tbody></table></div>
+       </details>
+        <details class="mfo-history" th:attr="id=|mfo-valuation-history-${holding.id}|"><summary>Share Valuation History</summary>
+          <p class="cs-empty" th:if="${valuationHistoryByHolding.get(holding.id) == null or #lists.isEmpty(valuationHistoryByHolding.get(holding.id))}">No share valuation changes recorded for this holding.</p>
+          <div class="cs-table-wrap" th:if="${valuationHistoryByHolding.get(holding.id) != null and !#lists.isEmpty(valuationHistoryByHolding.get(holding.id))}"><table class="cs-table"><thead><tr><th>Recorded Date</th><th>Effective Date</th><th class="cs-amount">Quantity at Event</th><th class="cs-amount">Value Before &middot; BDT per share</th><th class="cs-amount">Value After &middot; BDT per share</th><th>Reason</th></tr></thead><tbody>
+           <tr th:each="v:${valuationHistoryByHolding.get(holding.id)}"><td th:text="${v.createdAt != null ? #temporals.format(v.createdAt,'dd MMM yyyy') : 'N/A'}"></td><td th:text="${v.effectiveDate != null ? #temporals.format(v.effectiveDate,'dd MMM yyyy') : 'N/A'}"></td><td class="cs-amount" th:text="${v.quantityAfter}"></td><td class="cs-amount" th:text="${v.shareValueBefore != null ? #numbers.formatDecimal(v.shareValueBefore,1,'COMMA',2,'POINT') : 'Not recorded'}"></td><td class="cs-amount" th:text="${v.shareValueAfter != null ? #numbers.formatDecimal(v.shareValueAfter,1,'COMMA',2,'POINT') : 'Not recorded'}"></td><td th:text="${v.reason != null ? v.reason : 'Not recorded'}"></td></tr>
+         </tbody></table></div>
+       </details>
+     </div>
+    </div>
+  </div>
+  </section>
+  <section class="cs-card mfo-withdrawal-card" th:if="${foundEmployee != null}" id="mfo-withdrawal" aria-labelledby="mfo-withdrawal-title">
+    <div class="cs-card-header"><div><h3 class="cs-card-title" id="mfo-withdrawal-title">Share Withdrawal</h3><p class="mfo-withdrawal-subtitle">Manage share withdrawal requests, approvals and share posting.</p></div><button class="cs-btn cs-btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#mfo-withdrawal-request" th:disabled="${withdrawalEnabled != true or withdrawalPortfolio == null or #lists.isEmpty(withdrawalPortfolio.holdings) or (withdrawalPortfolio.availableOld + withdrawalPortfolio.availableNew == 0)}">Request Withdrawal</button></div>
+    <div class="cs-card-body">
+      <p class="alert alert-success" role="status" th:if="${withdrawalSuccess != null}" th:text="${withdrawalSuccess}"></p>
+      <p class="alert alert-danger" role="alert" th:if="${withdrawalError != null}" th:text="${withdrawalError}"></p>
+      <p class="alert alert-warning" role="status" th:if="${withdrawalEnabled != true and withdrawalStorageUnavailable != true}" th:text="${withdrawalRequestGateMessage != null ? withdrawalRequestGateMessage : 'Withdrawal requests are unavailable because the request-storage feature is disabled.'}"></p>
+      <p class="alert alert-warning" role="status" th:if="${withdrawalStorageUnavailable == true}">Withdrawal requests are temporarily unavailable because the database schema could not be read. No request was accepted.</p>
+      <p class="alert alert-info" role="status" th:if="${withdrawalEnabled == true and withdrawalApprovalGateMessage != null}" th:text="${withdrawalApprovalGateMessage}"></p>
+      <p class="alert alert-info" role="status" th:if="${withdrawalEnabled == true and withdrawalPostingGateMessage != null}" th:text="${withdrawalPostingGateMessage}"></p>
+      <div class="mfo-withdrawal-metrics" th:if="${withdrawalPortfolio != null}">
+        <div><span>Available OLD Shares</span><strong th:text="${withdrawalPortfolio.availableOld}"></strong></div><div><span>Available NEW Shares</span><strong th:text="${withdrawalPortfolio.availableNew}"></strong></div>
+        <div><span>Reserved Shares</span><strong th:text="${withdrawalPortfolio.reservedShares}"></strong></div><div><span>Pending Requests</span><strong th:text="${withdrawalPortfolio.pendingRequests}"></strong></div>
+      </div>
+      <p class="cs-empty" th:if="${withdrawalEnabled == true and withdrawalPortfolio != null and #lists.isEmpty(withdrawalPortfolio.holdings)}">This employee has no eligible share holdings for withdrawal.</p>
+      <p class="cs-empty" th:if="${withdrawalEnabled == true and (withdrawalRecent == null or #lists.isEmpty(withdrawalRecent))}"><strong>No withdrawal requests recorded for this employee.</strong><br><span>Create a withdrawal request to begin the approval process.</span></p>
+      <div class="cs-table-wrap" th:if="${withdrawalRecent != null and !#lists.isEmpty(withdrawalRecent)}"><table class="cs-table mfo-withdrawal-table"><thead><tr><th>Request ID</th><th>Date</th><th>Effective Date</th><th>Category</th><th class="cs-amount">Qty</th><th class="cs-amount">Net Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>
+        <tr th:each="w:${withdrawalRecent}" th:attr="data-withdrawal-row-id=${w.id},data-withdrawal-employee=${foundEmployee.employeeId + ' — ' + foundEmployee.fullName},data-withdrawal-category=${w.category},data-withdrawal-quantity=${w.quantity},data-withdrawal-status=${w.status}"><td th:text="|WR-${w.id}|" class="text-nowrap"></td><td th:text="${w.requestDate != null ? #temporals.format(w.requestDate,'dd MMM yyyy') : 'N/A'}"></td><td th:text="${w.effectiveDate != null ? #temporals.format(w.effectiveDate,'dd MMM yyyy') : 'N/A'}"></td><td th:text="${w.category}"></td><td class="cs-amount" th:text="${w.quantity}"></td><td class="cs-amount" th:text="${w.net != null ? 'BDT ' + #numbers.formatDecimal(w.net,1,'COMMA',2,'POINT') : 'Not valued'}"></td><td><span class="cs-status" th:classappend="${'cs-status-' + #strings.toLowerCase(w.status.name())}" th:text="${w.status}"></span><small class="d-block" th:if="${w.status.name() == 'APPROVED' and w.postedAt == null}">Shares not posted</small><small class="d-block" th:if="${w.postedAt != null}" th:text="|Shares posted ${#temporals.format(w.postedAt,'dd MMM yyyy HH:mm')}|"></small></td><td><div class="mfo-withdrawal-actions">
+          <details class="mfo-withdrawal-detail"><summary>View Details</summary><div class="mfo-withdrawal-detail-body"><p><strong>Requested by:</strong> <span th:text="${w.requestedBy ?: 'Requester not recorded'}"></span><span th:if="${w.createdAt != null}" th:text="| · ${#temporals.format(w.createdAt,'dd MMM yyyy HH:mm')}|"></span></p><p><strong>Request reason:</strong> <span th:text="${w.reason}"></span></p><p th:if="${w.gross != null}"><strong>Approved financial snapshot:</strong> Gross BDT <span th:text="${w.gross}"></span>, deduction BDT <span th:text="${w.deduction}"></span>, net BDT <span th:text="${w.net}"></span></p><p th:if="${w.approvedBy != null}"><strong>Approved by:</strong> <span th:text="${w.approvedBy}"></span><span th:if="${w.approvedAt != null}" th:text="| · ${#temporals.format(w.approvedAt,'dd MMM yyyy HH:mm')}|"></span></p><p th:if="${w.resolvedAt != null}"><strong th:text="|${w.status} by:|"></strong> <span th:text="${w.resolvedBy ?: 'Actor not recorded'}"></span><span th:text="| · ${#temporals.format(w.resolvedAt,'dd MMM yyyy HH:mm')}|"></span></p><p th:if="${w.rejectionReason != null}"><strong>Rejection reason:</strong> <span th:text="${w.rejectionReason}"></span></p><p th:if="${w.cancellationReason != null}"><strong>Cancellation reason:</strong> <span th:text="${w.cancellationReason}"></span></p><p th:if="${w.transactionReference != null}"><strong>Share posting:</strong> <span th:text="|${w.transactionReference} · ${w.postedBy ?: 'Actor not recorded'} · ${w.postedAt != null ? #temporals.format(w.postedAt,'dd MMM yyyy HH:mm') : 'time not recorded'}|"></span></p><p th:if="${w.disbursedAt != null}"><strong>Disbursement:</strong> <span th:text="${w.disbursedBy ?: 'Actor not recorded'}"></span> | <span th:text="|${w.paymentReference ?: 'Reference not recorded'} · ${#temporals.format(w.disbursedAt,'dd MMM yyyy HH:mm')}|"></span></p></div></details>
+          <button th:if="${w.status.name() == 'PENDING' and w.postedAt == null}" type="button" class="cs-btn cs-btn-outline cs-btn-sm" data-mfo-open-valuation-preview th:attr="data-preview-url=@{/admin/contribution-workspace/withdrawals/{id}/valuation-preview(id=${w.id})},data-request-id=${w.id},data-request-version=${w.version},data-request-effective-date=${w.effectiveDate},data-request-employee=${foundEmployee.employeeId + ' — ' + foundEmployee.fullName},data-request-category=${w.category},data-request-quantity=${w.quantity}">Financial Preview</button>
+          <form th:if="${w.status.name() == 'PENDING' and withdrawalApprovalEnabled == true and withdrawalCheckerAuthorized == true and w.requestedBy != null and w.requestedBy != withdrawalActor}" method="post" th:action="@{/admin/contribution-workspace/withdrawals/{id}/approve(id=${w.id})}" data-mfo-withdrawal-confirm="approve"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="version" th:value="${w.version}"><input type="hidden" name="employeeId" th:value="${employeeId}"><input type="hidden" name="year" th:value="${year}"><input type="hidden" name="month" th:value="${month}"><button class="cs-btn cs-btn-outline cs-btn-sm" type="button" data-mfo-open-withdrawal-confirm>Approve</button></form>
+          <form th:if="${w.status.name() == 'PENDING' and w.requestedBy != null and w.requestedBy == withdrawalActor}" method="post" th:action="@{/admin/contribution-workspace/withdrawals/{id}/cancel(id=${w.id})}" data-mfo-withdrawal-cancel th:attr="data-withdrawal-id=${w.id}"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="version" th:value="${w.version}"><input type="hidden" name="employeeId" th:value="${employeeId}"><input type="hidden" name="year" th:value="${year}"><input type="hidden" name="month" th:value="${month}"><input type="hidden" name="reason"><button class="cs-btn cs-btn-outline cs-btn-sm" type="button" data-mfo-open-cancel-withdrawal>Cancel Request</button></form>
+          <form th:if="${w.status.name() == 'PENDING' and withdrawalApprovalEnabled == true and withdrawalCheckerAuthorized == true and w.requestedBy != null and w.requestedBy != withdrawalActor}" method="post" th:action="@{/admin/contribution-workspace/withdrawals/{id}/reject(id=${w.id})}" data-mfo-withdrawal-reject th:attr="data-withdrawal-id=${w.id}"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="version" th:value="${w.version}"><input type="hidden" name="employeeId" th:value="${employeeId}"><input type="hidden" name="year" th:value="${year}"><input type="hidden" name="month" th:value="${month}"><input type="hidden" name="reason"><button class="cs-btn cs-btn-outline cs-btn-sm" type="button" data-mfo-open-withdrawal-reject>Reject</button></form>
+          <form th:if="${w.status.name() == 'APPROVED' and w.postedAt == null and withdrawalPostingEnabled == true}" method="post" th:action="@{/admin/contribution-workspace/withdrawals/{id}/post-shares(id=${w.id})}" data-mfo-withdrawal-confirm="post"><input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="version" th:value="${w.version}"><input type="hidden" name="employeeId" th:value="${employeeId}"><input type="hidden" name="year" th:value="${year}"><input type="hidden" name="month" th:value="${month}"><button class="cs-btn cs-btn-primary cs-btn-sm" type="button" data-mfo-open-withdrawal-confirm>Post Shares</button></form>
+          <span th:if="${w.status.name() == 'PENDING' and withdrawalApprovalEnabled != true}" class="cs-muted">Approval policy disabled</span><span th:if="${w.status.name() == 'PENDING' and withdrawalApprovalEnabled == true and withdrawalCheckerAuthorized != true}" class="cs-muted">Checker authority required</span><span th:if="${w.status.name() == 'PENDING' and withdrawalApprovalEnabled == true and withdrawalCheckerAuthorized == true and w.requestedBy == null}" class="cs-muted">Requester identity unverified</span><span th:if="${w.status.name() == 'PENDING' and withdrawalApprovalEnabled == true and withdrawalCheckerAuthorized == true and w.requestedBy == withdrawalActor}" class="cs-muted">Requester cannot review own request</span><span th:if="${w.status.name() == 'APPROVED' and w.postedAt == null and withdrawalPostingEnabled != true}" class="cs-muted">Posting policy disabled</span><span th:if="${w.postedAt != null and w.disbursedAt == null}" class="cs-muted">Disbursement policy disabled</span>
+        </div></td></tr>
+      </tbody></table></div>
+      <details class="mfo-history" th:if="${withdrawalHistory != null and !#lists.isEmpty(withdrawalHistory)}"><summary>View All Withdrawal History</summary><div class="cs-table-wrap"><table class="cs-table"><thead><tr><th>Request</th><th>Employee</th><th>Category</th><th>Quantity</th><th>Effective Date</th><th>Status &amp; Audit</th><th>Reason</th></tr></thead><tbody><tr th:each="w:${withdrawalHistory}"><td th:text="|WR-${w.id}|"></td><td th:text="|${w.employeeId} - ${w.fullName}|"></td><td th:text="${w.category}"></td><td th:text="${w.quantity}"></td><td th:text="${w.effectiveDate != null ? #temporals.format(w.effectiveDate,'dd MMM yyyy') : 'N/A'}"></td><td><span th:text="${w.status}"></span><small class="d-block" th:text="|Requested by ${w.requestedBy ?: 'Requester not recorded'}|"></small><small class="d-block" th:if="${w.approvedBy != null}" th:text="|Approved by ${w.approvedBy} · ${w.approvedAt != null ? #temporals.format(w.approvedAt,'dd MMM yyyy HH:mm') : 'time not recorded'}|"></small><small class="d-block" th:if="${w.resolvedAt != null}" th:text="|Resolved by ${w.resolvedBy ?: 'Actor not recorded'} · ${#temporals.format(w.resolvedAt,'dd MMM yyyy HH:mm')}|"></small><small class="d-block" th:if="${w.transactionReference != null}" th:text="|Share transaction ${w.transactionReference}, posted by ${w.postedBy}|"></small><small class="d-block" th:if="${w.rejectionReason != null}" th:text="|Rejection: ${w.rejectionReason}|"></small><small class="d-block" th:if="${w.cancellationReason != null}" th:text="|Cancellation: ${w.cancellationReason}|"></small></td><td th:text="${w.reason}"></td></tr></tbody></table></div></details>
+      <p class="cs-form-help mb-0">Requests reserve shares while pending. Approval does not reduce the portfolio; share posting creates the audited quantity transaction. Redemption valuation, deductions and disbursement remain unavailable until their financial policies are approved.</p>
+    </div>
+  </section>
+  <div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-withdrawal-request" aria-labelledby="mfo-withdrawal-request-title" th:if="${foundEmployee != null and withdrawalEnabled == true}">
+    <div class="offcanvas-header"><h2 class="h5" id="mfo-withdrawal-request-title">Request Share Withdrawal</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+    <form method="post" th:action="@{/admin/contribution-workspace/withdrawals}" class="mfo-scroll-form" data-mfo-withdrawal-request-form>
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="employeeId" th:value="${employeeId}"><input type="hidden" name="year" th:value="${year}"><input type="hidden" name="month" th:value="${month}"><input type="hidden" name="requestToken" th:value="${withdrawalRequestToken}">
+      <div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><p><span th:text="${foundEmployee.employeeDesignation}"></span> · <span th:text="${foundEmployee.employeeStatus}"></span></p>
+        <label class="cs-form-label" for="mfo-withdrawal-category">Share Category</label><select class="cs-form-select" id="mfo-withdrawal-category" name="category" required><option th:each="h:${withdrawalPortfolio.holdings}" th:value="${h.category}" th:text="|${h.category} — ${h.available} available|" th:attr="data-available=${h.available}" th:disabled="${h.available <= 0}" th:selected="${withdrawalCategory != null ? withdrawalCategory == h.category : (#lists.size(withdrawalPortfolio.holdings) == 1 and h.available > 0)}"></option></select>
+        <label class="cs-form-label mt-3" for="mfo-withdrawal-quantity">Requested Share Quantity</label><input class="cs-form-control" type="number" id="mfo-withdrawal-quantity" name="quantity" min="1" step="1" th:value="${withdrawalQuantity}" required><small class="cs-form-help" id="mfo-withdrawal-availability"></small>
+        <label class="cs-form-label mt-3" for="mfo-withdrawal-date">Withdrawal Effective Date</label><input class="cs-form-control" type="date" id="mfo-withdrawal-date" name="effectiveDate" th:value="${withdrawalEffectiveDate != null ? withdrawalEffectiveDate : today}" required>
+        <p class="cs-form-help mt-3">The withdrawal valuation, deductions and net disbursement amount are not entered until the authorized redemption policy is available. This request does not transfer money or reduce shares.</p>
+        <label class="cs-form-label" for="mfo-withdrawal-reason">Withdrawal Reason</label><textarea class="cs-form-control" id="mfo-withdrawal-reason" name="reason" maxlength="500" rows="3" th:text="${withdrawalReason}" required></textarea>
+      </div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary">Submit Request</button></div>
+    </form>
+  </div>
+  <div class="modal fade mfo-withdrawal-cancel-modal" id="mfo-cancel-withdrawal-modal" tabindex="-1" aria-labelledby="mfo-cancel-withdrawal-title" aria-describedby="mfo-cancel-withdrawal-note" aria-hidden="true" data-mfo-cancel-modal th:if="${foundEmployee != null and withdrawalEnabled == true}" th:attr="data-reopen-request-id=${withdrawalCancelRequestId}">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+      <div class="modal-header"><div><p class="mfo-cancel-eyebrow">Share Withdrawal</p><h2 class="modal-title h5" id="mfo-cancel-withdrawal-title">Cancel Withdrawal Request</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <dl class="mfo-cancel-request-summary">
+          <div><dt>Request ID</dt><dd data-mfo-cancel-request-id>—</dd></div>
+          <div><dt>Employee</dt><dd data-mfo-cancel-employee>—</dd></div>
+          <div><dt>Share Category</dt><dd data-mfo-cancel-category>—</dd></div>
+          <div><dt>Requested Quantity</dt><dd data-mfo-cancel-quantity>—</dd></div>
+          <div><dt>Current Status</dt><dd><span class="cs-status cs-status-pending" data-mfo-cancel-status>—</span></dd></div>
+        </dl>
+        <div class="mfo-cancel-notice" id="mfo-cancel-withdrawal-note"><i class="bi bi-info-circle" aria-hidden="true"></i><p>Cancelling this pending request will release its reserved shares. Actual share holdings and recorded cash transactions will remain unchanged.</p></div>
+        <label class="cs-form-label" for="mfo-cancel-withdrawal-reason">Cancellation Reason <span aria-hidden="true">*</span></label>
+        <textarea class="cs-form-control" id="mfo-cancel-withdrawal-reason" rows="4" maxlength="500" placeholder="Explain why this withdrawal request is being cancelled..." aria-describedby="mfo-cancel-reason-error mfo-cancel-reason-count" data-mfo-cancel-reason th:text="${withdrawalCancelReason}"></textarea>
+        <div class="mfo-cancel-validation-row"><p class="invalid-feedback" id="mfo-cancel-reason-error" role="alert" data-mfo-cancel-error></p><small id="mfo-cancel-reason-count" data-mfo-cancel-count>0 / 500</small></div>
+        <div class="alert alert-danger mt-3 mb-0" role="alert" data-mfo-cancel-server-error th:if="${withdrawalError != null}" th:text="${withdrawalError}"></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="modal">Keep Request</button><button type="button" class="cs-btn mfo-btn-danger" data-mfo-cancel-submit><span data-mfo-cancel-label>Cancel Withdrawal</span><span class="spinner-border spinner-border-sm ms-2 d-none" aria-hidden="true" data-mfo-cancel-spinner></span></button></div>
+    </div></div>
+  </div>
+  <div class="modal fade mfo-withdrawal-valuation-modal" id="mfo-withdrawal-valuation-modal" tabindex="-1" aria-labelledby="mfo-withdrawal-valuation-title" aria-describedby="mfo-valuation-preview-note" aria-hidden="true" data-mfo-valuation-modal th:if="${foundEmployee != null and withdrawalEnabled == true}">
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+      <div class="modal-header"><div><p class="mfo-cancel-eyebrow">Share Withdrawal · Calculation Only</p><h2 class="modal-title h5" id="mfo-withdrawal-valuation-title">Withdrawal Financial Preview</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <form data-mfo-valuation-form>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" data-mfo-valuation-csrf>
+        <input type="hidden" name="version" data-mfo-valuation-version>
+        <div class="modal-body">
+          <dl class="mfo-cancel-request-summary mfo-valuation-request-summary">
+            <div><dt>Employee</dt><dd data-mfo-valuation-employee>—</dd></div><div><dt>Request</dt><dd data-mfo-valuation-request>—</dd></div>
+            <div><dt>Share Category</dt><dd data-mfo-valuation-category>—</dd></div><div><dt>Requested Shares</dt><dd data-mfo-valuation-quantity>—</dd></div>
+            <div><dt>Available for This Request</dt><dd data-mfo-valuation-available>Calculated on submit</dd></div><div><dt>Reference Value per Share</dt><dd data-mfo-valuation-reference>Calculated for valuation date</dd></div>
+          </dl>
+          <div class="mfo-valuation-fields">
+            <div><label class="cs-form-label" for="mfo-valuation-unit">Proposed Withdrawal Value per Share (BDT) <span aria-hidden="true">*</span></label><input class="cs-form-control" id="mfo-valuation-unit" name="proposedValuePerShare" type="number" min="0" step="0.01" inputmode="decimal" required></div>
+            <div><label class="cs-form-label" for="mfo-valuation-deduction">Proposed Deduction (BDT) <span aria-hidden="true">*</span></label><input class="cs-form-control" id="mfo-valuation-deduction" name="proposedDeduction" type="number" min="0" step="0.01" inputmode="decimal" value="0.00" required></div>
+            <div><label class="cs-form-label" for="mfo-valuation-date">Applicable Valuation Date <span aria-hidden="true">*</span></label><input class="cs-form-control" id="mfo-valuation-date" name="valuationDate" type="date" required></div>
+          </div>
+          <label class="cs-form-label mt-3" for="mfo-valuation-reason">Valuation Reason <span aria-hidden="true">*</span></label><textarea class="cs-form-control" id="mfo-valuation-reason" name="valuationReason" rows="3" maxlength="500" required placeholder="Explain the basis for this proposed valuation."></textarea>
+          <div class="alert alert-danger mt-3 mb-0 d-none" role="alert" data-mfo-valuation-error></div>
+          <section class="mfo-valuation-result d-none" data-mfo-valuation-result aria-live="polite">
+            <div class="mfo-valuation-result-heading"><strong>Calculated Preview</strong><span class="cs-status cs-status-pending">PREVIEW ONLY · NOT AUTHORIZED</span></div>
+            <dl><div><dt>Reference Share Value</dt><dd data-mfo-result-reference></dd></div><div><dt>Gross Withdrawal</dt><dd data-mfo-result-gross></dd></div><div><dt>Proposed Deduction</dt><dd data-mfo-result-deduction></dd></div><div class="mfo-valuation-net"><dt>Proposed Net Withdrawal</dt><dd data-mfo-result-net></dd></div></dl>
+            <p data-mfo-result-basis></p>
+          </section>
+          <div class="mfo-cancel-notice mt-3" id="mfo-valuation-preview-note"><i class="bi bi-shield-lock" aria-hidden="true"></i><p>This is a server-calculated, non-persistent preview. It does not authorize a payout, approve the request, change share quantity, create a cash transaction, or alter contribution records.</p></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="modal">Close</button><button type="submit" class="cs-btn cs-btn-primary" data-mfo-valuation-submit><span data-mfo-valuation-label>Calculate Preview</span><span class="spinner-border spinner-border-sm ms-2 d-none" aria-hidden="true" data-mfo-valuation-spinner></span></button></div>
+      </form>
+    </div></div>
+  </div>
+  <div class="modal fade mfo-withdrawal-cancel-modal" id="mfo-withdrawal-transition-modal" tabindex="-1" aria-labelledby="mfo-withdrawal-transition-title" aria-hidden="true" data-mfo-transition-modal th:if="${foundEmployee != null and withdrawalEnabled == true}">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+      <div class="modal-header"><div><p class="mfo-cancel-eyebrow">Share Withdrawal</p><h2 class="modal-title h5" id="mfo-withdrawal-transition-title">Confirm Withdrawal Action</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <dl class="mfo-cancel-request-summary">
+          <div><dt>Request ID</dt><dd data-mfo-transition-id>—</dd></div><div><dt>Employee</dt><dd data-mfo-transition-employee>—</dd></div>
+          <div><dt>Share Category</dt><dd data-mfo-transition-category>—</dd></div><div><dt>Requested Quantity</dt><dd data-mfo-transition-quantity>—</dd></div>
+          <div><dt>Effective Date</dt><dd data-mfo-transition-date>—</dd></div><div><dt>Current Status</dt><dd data-mfo-transition-status>—</dd></div>
+          <div><dt>Approved Net</dt><dd data-mfo-transition-net>Not authorized</dd></div>
+        </dl>
+        <div class="mfo-cancel-notice" data-mfo-transition-notice><i class="bi bi-info-circle" aria-hidden="true"></i><p data-mfo-transition-message></p></div>
+        <div class="alert alert-danger mt-3 mb-0 d-none" role="alert" data-mfo-transition-error></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="modal">Keep Request</button><button type="button" class="cs-btn cs-btn-primary" data-mfo-transition-submit><span data-mfo-transition-label>Confirm</span><span class="spinner-border spinner-border-sm ms-2 d-none" aria-hidden="true" data-mfo-transition-spinner></span></button></div>
+    </div></div>
+  </div>
+  <div class="modal fade mfo-withdrawal-cancel-modal" id="mfo-withdrawal-reject-modal" tabindex="-1" aria-labelledby="mfo-withdrawal-reject-title" aria-hidden="true" data-mfo-reject-modal th:if="${foundEmployee != null and withdrawalEnabled == true}" th:attr="data-reopen-request-id=${withdrawalRejectRequestId}">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+      <div class="modal-header"><div><p class="mfo-cancel-eyebrow">Independent Checker Review</p><h2 class="modal-title h5" id="mfo-withdrawal-reject-title">Reject Withdrawal Request</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <dl class="mfo-cancel-request-summary">
+          <div><dt>Request ID</dt><dd data-mfo-reject-id>—</dd></div><div><dt>Employee</dt><dd data-mfo-reject-employee>—</dd></div>
+          <div><dt>Share Category</dt><dd data-mfo-reject-category>—</dd></div><div><dt>Requested Quantity</dt><dd data-mfo-reject-quantity>—</dd></div>
+          <div><dt>Current Status</dt><dd data-mfo-reject-status>—</dd></div>
+        </dl>
+        <div class="mfo-cancel-notice"><i class="bi bi-info-circle" aria-hidden="true"></i><p>Rejecting this pending request releases its reserved shares. Actual share holdings, contribution payments and cash records remain unchanged.</p></div>
+        <label class="cs-form-label" for="mfo-withdrawal-reject-reason">Rejection Reason <span aria-hidden="true">*</span></label>
+        <textarea class="cs-form-control" id="mfo-withdrawal-reject-reason" rows="4" maxlength="500" placeholder="Explain why this request is being rejected..." aria-describedby="mfo-reject-reason-error mfo-reject-reason-count" data-mfo-reject-reason th:text="${withdrawalRejectReason}"></textarea>
+        <div class="mfo-cancel-validation-row"><p class="invalid-feedback" id="mfo-reject-reason-error" role="alert" data-mfo-reject-error></p><small id="mfo-reject-reason-count" data-mfo-reject-count>0 / 500</small></div>
+        <div class="alert alert-danger mt-3 mb-0" role="alert" data-mfo-reject-server-error th:if="${withdrawalRejectRequestId != null and withdrawalError != null}" th:text="${withdrawalError}"></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="modal">Keep Request</button><button type="button" class="cs-btn mfo-btn-danger" data-mfo-reject-submit><span data-mfo-reject-label>Reject Withdrawal</span><span class="spinner-border spinner-border-sm ms-2 d-none" aria-hidden="true" data-mfo-reject-spinner></span></button></div>
+    </div></div>
+  </div>
+  <p class="mfo-workflow-hint" th:if="${foundEmployee == null and operationError == null}"><i class="bi bi-person-check" aria-hidden="true"></i> Working across employees. Select a Business Employee ID below to view their share portfolio, allocation, adjustment, rates and history.</p>
+  <p class="mfo-context-note" role="status" th:if="${foundEmployee == null and employeeName != null and !#strings.isEmpty(employeeName) and operationCandidates != null and #lists.isEmpty(operationCandidates) and operationError == null}">No employees match that name. Check the spelling or clear the name filter.</p>
+  <section class="cs-card mfo-monthly-card" id="mfo-monthly" aria-labelledby="mfo-monthly-title">
+    <div class="cs-card-header"><div><h3 class="cs-card-title" id="mfo-monthly-title">Monthly Contributions &amp; Payments</h3><p class="mfo-table-period" th:text="${#temporals.format(selectedMonth,'MMMM yyyy')}"></p></div><span class="mfo-currency-note">All amounts in BDT</span></div>
+    <div class="cs-card-body">
+      <p class="cs-form-help" id="mfo-monthly-description">Viewing records does not generate dues or receive money. Direct cash and applied member credit remain separate. This report follows the contribution month and includes later payments under the existing reporting rules.</p>
+      <div class="mfo-empty-state" th:if="${operationError == null and (operationRows == null or #lists.isEmpty(operationRows))}">
+        <i class="bi bi-inbox" aria-hidden="true"></i><div><strong>No monthly records to display</strong><p th:text="${operationPage != null and operationPage.totalElements > 0 ? 'This page is outside the matching results. Return to the first page.' : 'No contribution records match the employee, month and status filters. Viewing this page never creates an obligation.'}"></p><a class="cs-btn cs-btn-outline cs-btn-sm" th:href="@{/admin/contribution-workspace(tab='member-operations',year=${year},month=${month})}">Reset Filters</a></div>
+      </div>
+      <div class="cs-table-wrap" th:if="${operationRows != null and !#lists.isEmpty(operationRows)}" tabindex="0" role="region" aria-label="Monthly financial register. Scroll horizontally for all columns.">
+        <table class="cs-table mfo-contribution-table" id="mfo-contribution-register" aria-describedby="mfo-monthly-description">
+          <caption class="visually-hidden">Employee obligations, direct payments, applied member credit and outstanding amounts for the selected reporting month.</caption>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Month</th><th scope="col" class="cs-amount">Monthly Due (BDT)</th><th scope="col" class="cs-amount">Share Value (BDT)</th><th scope="col" class="cs-amount">Cash Received (BDT)</th><th scope="col" class="cs-amount">Credit Applied (BDT)</th><th scope="col" class="cs-amount">Total Settled (BDT)</th><th scope="col" class="cs-amount">Outstanding (BDT)</th><th scope="col">Status</th><th scope="col">Remarks</th><th scope="col">Actions</th></tr></thead>
+          <tbody><tr th:each="c:${operationRows}" th:classappend="${foundEmployee != null and c.employee.employeeId == foundEmployee.employeeId} ? 'mfo-selected-row'" th:with="line=${operationLines.get(c.id)}"><td><a class="mfo-member-link" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${c.employee.employeeId},year=${year},month=${month})}" th:text="${c.employee.employeeId}"></a><small class="d-block" th:text="${c.employee.fullName}"></small></td><td class="mfo-month-cell" th:text="${#temporals.format(c.contributionMonth,'MMM yyyy')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(line.expected,1,'COMMA',2,'POINT')}"></td><td class="cs-amount" th:text="${c.shareValue == null ? '—' : #numbers.formatDecimal(c.shareValue,1,'COMMA',2,'POINT')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(line.collected,1,'COMMA',2,'POINT')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(line.creditApplied,1,'COMMA',2,'POINT')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(line.totalSettled,1,'COMMA',2,'POINT')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(line.outstanding,1,'COMMA',2,'POINT')}"></td><td><span class="cs-status" th:classappend="${c.contributionStatus.name() == 'PAID' ? 'cs-status-paid' : (c.contributionStatus.name() == 'PENDING' ? 'cs-status-pending' : 'cs-status-canceled')}" th:text="${line.status}"></span><small class="d-block" th:if="${line.totalSettled.signum() > 0 and line.outstanding.signum() > 0}">Partially settled</small></td><td th:text="${c.remarks == null or #strings.isEmpty(c.remarks) ? '—' : c.remarks}"></td><td><div class="mfo-register-actions"><a class="cs-btn cs-btn-primary cs-btn-sm mfo-payment-action" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${c.employee.employeeId},contributionId=${c.id},year=${year},month=${month},status=${operationStatus},mfoAction='payment')}" th:text="${line.outstanding.signum() > 0 and c.contributionStatus.name() != 'CANCELED' ? (line.totalSettled.signum() > 0 ? 'Confirm Remaining Payment' : 'Confirm Payment') : 'View Payment History'}">Confirm Payment</a><details class="mfo-action-menu" open><summary>More Actions</summary><div class="mfo-secondary-links"><a class="cs-btn cs-btn-outline cs-btn-sm" th:href="@{/admin/contributions/{id}(id=${c.id})}">Details</a><a class="cs-btn cs-btn-outline cs-btn-sm" th:href="@{/admin/contributions/{id}/edit(id=${c.id})}">Edit</a></div></details></div></td></tr></tbody>
+        </table>
+      </div>
+      <nav class="mfo-pagination" aria-label="Monthly operational records" th:if="${operationPage != null}">
+        <div class="mfo-page-summary"><strong th:text="|${operationPage.totalElements} matching records|"></strong><span th:text="|Page ${operationPage.totalPages == 0 ? 1 : operationPage.number + 1} of ${operationPage.totalPages == 0 ? 1 : operationPage.totalPages}|"></span></div>
+        <div class="mfo-page-controls">
+          <a class="mfo-page-button" rel="prev" th:if="${operationPage.hasPrevious()}" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},employeeName=${employeeName},year=${year},month=${month},status=${operationStatus},size=${operationPage.size},contextApplied=1,page=${operationPage.number - 1})}">Previous</a><span class="mfo-page-button is-disabled" aria-disabled="true" th:unless="${operationPage.hasPrevious()}">Previous</span>
+          <th:block th:if="${operationPage.totalPages > 0}" th:with="first=${T(java.lang.Math).max(0,operationPage.number - 2)},last=${T(java.lang.Math).min(operationPage.totalPages - 1,operationPage.number + 2)}">
+            <a class="mfo-page-button" th:if="${first > 0}" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},employeeName=${employeeName},year=${year},month=${month},status=${operationStatus},size=${operationPage.size},contextApplied=1,page=0)}" aria-label="Page 1">1</a><span class="mfo-page-gap" th:if="${first > 1}" aria-hidden="true">&hellip;</span>
+            <th:block th:if="${first <= last}" th:each="p:${#numbers.sequence(first,last)}"><span class="mfo-page-button is-current" aria-current="page" th:if="${p == operationPage.number}" th:text="${p + 1}"></span><a class="mfo-page-button" th:unless="${p == operationPage.number}" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},employeeName=${employeeName},year=${year},month=${month},status=${operationStatus},size=${operationPage.size},contextApplied=1,page=${p})}" th:attr="aria-label=|Page ${p + 1}|" th:text="${p + 1}"></a></th:block>
+            <span class="mfo-page-gap" th:if="${last < operationPage.totalPages - 2}" aria-hidden="true">&hellip;</span><a class="mfo-page-button" th:if="${last < operationPage.totalPages - 1}" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},employeeName=${employeeName},year=${year},month=${month},status=${operationStatus},size=${operationPage.size},contextApplied=1,page=${operationPage.totalPages - 1})}" th:attr="aria-label=|Page ${operationPage.totalPages}|" th:text="${operationPage.totalPages}"></a>
+          </th:block>
+          <a class="mfo-page-button" rel="next" th:if="${operationPage.hasNext()}" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},employeeName=${employeeName},year=${year},month=${month},status=${operationStatus},size=${operationPage.size},contextApplied=1,page=${operationPage.number + 1})}">Next</a><span class="mfo-page-button is-disabled" aria-disabled="true" th:unless="${operationPage.hasNext()}">Next</span>
+        </div>
+      </nav>
+    </div>
+  </section>
+  <section id="mfo-collections" th:if="${foundEmployee != null}"><div class="cs-card mfo-payments-card"><div class="cs-card-header"><div><h3 class="cs-card-title">Payments &amp; Collections</h3><p class="mfo-payments-subtitle">Manage monthly obligations, payment receipts and transaction history.</p></div><a class="cs-btn cs-btn-primary" th:href="@{/admin/contributions/new(employeeId=${employeeId},year=${year},month=${month})}"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create Contribution</a></div><div class="cs-card-body"><div class="mfo-payment-context"><strong th:text="|${foundEmployee.employeeId} — ${foundEmployee.fullName}|"></strong><span>Reporting Period: <strong th:text="${#temporals.format(selectedMonth,'MMMM yyyy')}"></strong></span></div><div
+                        class="cs-card cs-payment-detail-card"
+                        th:if="${paymentSummary != null}"
+                        style="margin-bottom:16px;">
+                    <div class="cs-card-header">
+                            <h2 class="cs-card-title">Contribution Summary</h2>
+
+                            <span
+                                class="cs-status"
+                                th:classappend="${paymentSummary.status.name() == 'PAID'} ? 'cs-status-paid' : (${paymentSummary.status.name() == 'PENDING'} ? 'cs-status-pending' : 'cs-status-canceled')"
+                                th:text="${paymentSummary.status}"></span>
+                        </div>
+                        <div class="cs-card-body">
+
+                            <section class="mfo-payment-overview" aria-label="Contribution financial summary"><dl><div><dt>Recorded Monthly Due</dt><dd th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.expectedAmount,1,'COMMA',2,'POINT')}"></dd></div><div><dt>Net Cash Received</dt><dd th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.collectedAmount,1,'COMMA',2,'POINT')}"></dd></div><div><dt>Applied Member Credit</dt><dd th:text="${paymentAppliedCredit != null ? 'BDT ' + #numbers.formatDecimal(paymentAppliedCredit,1,'COMMA',2,'POINT') : 'BDT 0.00'}"></dd></div><div class="mfo-outstanding-line"><dt>Outstanding Balance</dt><dd th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.outstandingAmount,1,'COMMA',2,'POINT')}"></dd></div></dl></section>
+                            <button type="button" class="cs-btn cs-btn-primary" data-bs-toggle="offcanvas" data-bs-target="#mfo-payment" th:text="${paymentSummary.status.name() == 'PENDING' and paymentSummary.outstandingAmount.signum() > 0 ? (paymentSummary.collectedAmount.signum() > 0 ? 'Confirm Remaining Payment' : 'Confirm Payment') : 'View Payment History'}">Confirm Payment</button>
+
+<details class="mfo-history" id="mfo-payment-history"><summary>Payment History &amp; Reversals</summary>                            <h3 class="cs-card-title" style="font-size:.9rem;margin:20px 0 12px;">Payment history</h3>
+                            <p class="cs-empty" th:if="${#lists.isEmpty(paymentSummary.payments)}">No payments recorded yet.</p>
+                            <div class="cs-table-wrap" th:if="${!#lists.isEmpty(paymentSummary.payments)}">
+                                <table class="cs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Payment ID</th>
+                                            <th>Payment Date</th>
+                                            <th class="cs-amount">Received Amount (BDT)</th>
+                                            <th>Payment Method</th>
+                                            <th>Reference Number</th>
+                                            <th>Payment Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+
+                                        <tr th:each="p:${paymentSummary.payments}">
+                                            <td th:text="${p.paymentId}"></td>
+                                            <td
+                                                th:text="${p.paymentDate != null ? #temporals.format(p.paymentDate, 'dd MMM yyyy') : 'N/A'}"></td>
+                                            <td
+                                                class="cs-amount"
+                                                th:text="${p.amount != null ? #numbers.formatDecimal(p.amount, 1, 'COMMA', 2, 'POINT') : '0.00'}"></td>
+                                            <td th:text="${T(com.fundaxis.entity.ContributionPayment).displayPaymentMethod(p.paymentMethod)}"></td>
+                                            <td><span th:text="${p.referenceNo != null ? p.referenceNo : 'Not recorded'}"></span><details class="mfo-audit-details"><summary>Receipt Details</summary><p th:text="|Payment reference: ${p.paymentId}|"></p><p th:if="${p.notes != null}" th:text="${p.notes}"></p><small th:text="${p.createdAt != null ? #temporals.format(p.createdAt, 'dd MMM yyyy') : 'N/A'}"></small></details></td>
+
+                                            <td>
+                                                <span
+                                                    class="cs-status"
+                                                    th:classappend="${p.reversed} ? 'cs-status-reversed' : 'cs-status-active'"
+                                                    th:text="${p.reversed ? 'REVERSED' : 'ACTIVE'}"></span><div class="mfo-reversal-details" th:if="${p.reversed}"><small th:text="${p.reversalDate != null ? #temporals.format(p.reversalDate, 'dd MMM yyyy') : 'N/A'}"></small><span th:text="${p.reversalReason}"></span><small>Excluded from net cash received</small></div>
+                                            </td>
+
+                                            <td>
+                                                <button type="button" class="cs-btn cs-btn-outline cs-btn-sm" th:if="${!p.reversed and paymentSummary.status.name() != 'CANCELED' and !p.paymentDate.isAfter(today)}" data-mfo-bound-open="reverse-payment" data-bs-toggle="offcanvas" data-bs-target="#mfo-reverse-payment" th:attr="data-post-url=@{/admin/contribution-workspace/payments/{c}/{p}/reverse(c=${paymentSummary.contributionId},p=${p.paymentId})},data-reference=|Payment ${p.paymentId}|,data-amount-label=${'BDT ' + #numbers.formatDecimal(p.amount,1,'COMMA',2,'POINT')},data-min-date=${p.paymentDate}">Reverse Payment</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="cs-export-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Reversal never deletes the payment row; it excludes the amount from active collection and reopens outstanding balance.</p>
+</details>                        </div>
+                    </div><div class="mfo-no-contribution" th:if="${paymentSummary == null}"><div class="mfo-payment-overview"><dl><div><dt>Expected Monthly Contribution</dt><dd th:text="${historicalExpected != null ? 'BDT ' + #numbers.formatDecimal(historicalExpected,1,'COMMA',2,'POINT') : 'Unavailable'}"></dd></div><div><dt>Recorded Monthly Due</dt><dd>No Record</dd></div><div><dt>Net Cash Received</dt><dd>BDT 0.00</dd></div><div><dt>Applied Member Credit</dt><dd>BDT 0.00</dd></div><div class="mfo-outstanding-line"><dt>Outstanding</dt><dd>No Record</dd></div></dl></div><div class="mfo-no-contribution-footer"><span><strong>Contribution Status: NOT CREATED</strong><small>No payment can be recorded until an eligible contribution has been created.</small></span><div class="mfo-actions"><a class="cs-btn cs-btn-outline" th:href="@{/admin/contribution-workspace(tab='monthly-records',view='history',year=${year},month=${month},employeeId=${employeeId})}">View Contribution History</a></div></div></div></div></div><section class="cs-card mfo-credit-overview" id="mfo-credit-overview" aria-labelledby="mfo-credit-title">
+  <div class="cs-card-header"><h3 class="cs-card-title" id="mfo-credit-title">Member Credit &amp; Additional Collections</h3><span class="mfo-currency-note">Separate credit ledger</span></div>
+  <div class="cs-card-body">
+    <div class="mfo-credit-topline"><div><p class="mfo-eyebrow">AVAILABLE MEMBER CREDIT</p><strong class="mfo-credit-balance" id="mfo-available-credit" th:text="${creditBalance != null ? 'BDT ' + #numbers.formatDecimal(creditBalance,1,'COMMA',2,'POINT') : 'Unavailable'}"></strong><p class="cs-form-help">Available to apply; separate from this month's direct cash receipts.</p></div><div class="mfo-actions"><button type="button" class="cs-btn cs-btn-primary" data-bs-toggle="offcanvas" data-bs-target="#mfo-collection">Receive Collection</button><a th:if="${creditLoaded != true}" class="cs-btn cs-btn-outline" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},year=${year},month=${month},status=${operationStatus},mfoAction='credit')}">View Credit Ledger</a><button th:if="${creditLoaded == true}" type="button" class="cs-btn cs-btn-outline" data-mfo-open-details="#mfo-credit-ledger">View Credit Ledger</button></div></div>
+    <div class="mfo-credit-recent"><h4>Recent Collections</h4><p class="cs-form-help">Latest three collection records. Allocation activity is available in full history.</p><p class="mfo-compact-empty" th:if="${recentCredits == null or #lists.isEmpty(recentCredits)}">No additional collections recorded for this member.</p><div class="cs-table-wrap" th:if="${recentCredits != null and !#lists.isEmpty(recentCredits)}"><table class="cs-table mfo-recent-credit-table"><thead><tr><th>Date</th><th>Reference</th><th class="cs-amount">Collected &middot; BDT</th><th>Status</th></tr></thead><tbody><tr th:each="c:${recentCredits}"><td th:text="${#temporals.format(c.collectionDate, 'dd MMM yyyy')}"></td><td th:text="${c.referenceNo != null ? c.referenceNo : 'Credit ' + c.id}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(c.originalAmount,1,'COMMA',2,'POINT')}"></td><td><span class="cs-status" th:classappend="${c.status.name() == 'REVERSED' ? 'cs-status-reversed' : 'cs-status-neutral'}" th:text="${#strings.replace(c.status.name(),'_',' ')}"></span></td></tr></tbody></table></div></div>
+    <a th:if="${creditLoaded != true}" class="mfo-member-link" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},year=${year},month=${month},status=${operationStatus},mfoAction='credit',creditHistory='allocations')}">View Full History</a><button th:if="${creditLoaded == true}" type="button" class="cs-btn cs-btn-outline cs-btn-sm" data-mfo-open-details="#mfo-credit-allocation-history">View Full History</button>
+    <details th:if="${creditLoaded == true}" class="mfo-history cs-member-credit-collapse mfo-credit-ledger" id="mfo-credit-ledger">
+      <summary>Member Credit Ledger <span class="cs-muted" th:text="|(${#lists.size(creditHistory)} records)|"></span></summary>
+      <p class="mfo-compact-empty" th:if="${#lists.isEmpty(creditHistory)}">No credit records yet. Receive a verified additional collection to create available credit.</p>
+      <div class="cs-table-wrap" th:if="${!#lists.isEmpty(creditHistory)}"><table class="cs-table mfo-credit-ledger-table"><thead><tr><th>Credit Reference</th><th>Collection Date</th><th class="cs-amount">Original &middot; BDT</th><th class="cs-amount">Available &middot; BDT</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        <tr th:each="credit:${creditHistory}"><td><strong th:text="|Credit ${credit.id}|"></strong><small class="d-block" th:text="${credit.referenceNo != null ? credit.referenceNo : 'No external reference'}"></small></td><td th:text="${#temporals.format(credit.collectionDate, 'dd MMM yyyy')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(credit.originalAmount,1,'COMMA',2,'POINT')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(credit.availableAmount,1,'COMMA',2,'POINT')}"></td><td><span class="cs-status" th:classappend="${credit.status.name() == 'REVERSED' ? 'cs-status-reversed' : (credit.status.name() == 'PARTIALLY_APPLIED' ? 'cs-status-pending' : 'cs-status-neutral')}" th:text="${#strings.replace(credit.status.name(),'_',' ')}"></span></td><td><div class="mfo-credit-row-actions">
+          <button type="button" class="cs-btn cs-btn-primary cs-btn-sm" th:if="${credit.availableAmount.signum() > 0 and (credit.status.name() == 'UNALLOCATED' or credit.status.name() == 'PARTIALLY_APPLIED') and paymentSummary != null and paymentSummary.status.name() == 'PENDING' and paymentSummary.outstandingAmount.signum() > 0}" data-mfo-bound-open="apply-credit" data-bs-toggle="offcanvas" data-bs-target="#mfo-apply-credit" th:attr="data-post-url=@{/admin/contribution-workspace/credits/{id}/apply(id=${credit.id})},data-reference=|Credit ${credit.id}|,data-amount-label=${'Available credit: BDT ' + #numbers.formatDecimal(credit.availableAmount,1,'COMMA',2,'POINT')},data-available-label=${'Outstanding contribution: BDT ' + #numbers.formatDecimal(paymentSummary.outstandingAmount,1,'COMMA',2,'POINT')},data-maximum-label=${'Maximum applicable: BDT ' + #numbers.formatDecimal(credit.availableAmount.min(paymentSummary.outstandingAmount),1,'COMMA',2,'POINT')},data-limit=${credit.availableAmount.min(paymentSummary.outstandingAmount).toPlainString()},data-full-outstanding=${credit.availableAmount.compareTo(paymentSummary.outstandingAmount) >= 0 ? paymentSummary.outstandingAmount.toPlainString() : null},data-min-date=${credit.collectionDate}">Apply Credit</button>
+          <a class="mfo-member-link" href="#mfo-context" th:if="${credit.availableAmount.signum() > 0 and credit.status.name() != 'REVERSED' and (paymentSummary == null or paymentSummary.status.name() != 'PENDING' or paymentSummary.outstandingAmount.signum() <= 0)}">Select an eligible contribution</a>
+          <details class="mfo-audit-details"><summary>More</summary><div class="mfo-credit-record-details"><p th:if="${credit.notes != null}" th:text="${credit.notes}"></p><p th:text="|Method: ${credit.paymentMethod}|"></p><small th:text="${credit.createdAt != null ? #temporals.format(credit.createdAt, 'dd MMM yyyy') : 'N/A'}"></small><p th:if="${credit.status.name() == 'REVERSED'}"><strong>Reversed: </strong><span th:text="${credit.reversalDate != null ? #temporals.format(credit.reversalDate, 'dd MMM yyyy') : 'N/A'}"></span> &mdash; <span th:text="${credit.reversalReason}"></span></p><button class="cs-btn cs-btn-outline cs-btn-sm" type="button" data-mfo-open-details="#mfo-credit-allocation-history">View Allocations</button>
+          <button type="button" class="cs-btn cs-btn-danger cs-btn-sm" th:if="${credit.status.name() == 'UNALLOCATED' and credit.originalAmount.compareTo(credit.availableAmount) == 0}" data-mfo-bound-open="reverse-credit" data-bs-toggle="offcanvas" data-bs-target="#mfo-reverse-credit" th:attr="data-post-url=@{/admin/contribution-workspace/credits/{id}/reverse(id=${credit.id})},data-reference=|Credit ${credit.id}|,data-amount-label=${'BDT ' + #numbers.formatDecimal(credit.originalAmount,1,'COMMA',2,'POINT')},data-available-label=${'Available balance: BDT ' + #numbers.formatDecimal(credit.availableAmount,1,'COMMA',2,'POINT')},data-min-date=${credit.collectionDate}">Reverse Collection</button><small th:unless="${credit.status.name() == 'UNALLOCATED' and credit.originalAmount.compareTo(credit.availableAmount) == 0}">Collection reversal is unavailable until all required allocation reversals are complete and the credit is unallocated.</small></div></details>
+        </div></td></tr>
+      </tbody></table></div>
+      <p class="cs-form-help">Applying credit is an internal settlement, not a new cash receipt. Reversals retain the original history and do not automatically refund bank funds.</p>
+      <details class="mfo-history mfo-allocation-history" id="mfo-credit-allocation-history"><summary>Credit Allocation History</summary>
+        <div class="mfo-compact-empty" th:if="${#lists.isEmpty(allocationHistory)}"><strong>No allocations yet</strong><p>Available credit becomes a monthly settlement only when it is applied to an eligible contribution.</p></div>
+        <div class="cs-table-wrap" th:if="${!#lists.isEmpty(allocationHistory)}"><table class="cs-table mfo-allocation-table"><thead><tr><th>Applied Date</th><th>Credit Reference</th><th>Contribution Period</th><th class="cs-amount">Amount &middot; BDT</th><th>Status</th><th>Reversal Information</th><th>Actions</th></tr></thead><tbody><tr th:each="allocation:${allocationHistory}"><td th:text="${#temporals.format(allocation.appliedDate, 'dd MMM yyyy')}"></td><td><span th:text="|Credit ${allocation.credit.id}|"></span><details class="mfo-audit-details"><summary>Audit References</summary><small th:text="|Allocation ${allocation.id} - Contribution ${allocation.contribution.id}|"></small></details></td><td th:text="${#temporals.format(allocation.contribution.contributionMonth,'MMM yyyy')}"></td><td class="cs-amount" th:text="${#numbers.formatDecimal(allocation.amount,1,'COMMA',2,'POINT')}"></td><td><span class="cs-status" th:classappend="${allocation.reversed ? 'cs-status-reversed' : 'cs-status-active'}" th:text="${allocation.reversed ? 'REVERSED' : 'ACTIVE'}"></span></td><td><div class="mfo-reversal-details" th:if="${allocation.reversed}"><span th:text="${allocation.reversalDate != null ? #temporals.format(allocation.reversalDate, 'dd MMM yyyy') : 'N/A'}"></span><small th:text="${allocation.reversalReason}"></small></div><span th:unless="${allocation.reversed}">&mdash;</span></td><td><button type="button" class="cs-btn cs-btn-outline cs-btn-sm" th:if="${!allocation.reversed and allocation.contribution.contributionStatus.name() != 'CANCELED'}" data-mfo-bound-open="reverse-allocation" data-bs-toggle="offcanvas" data-bs-target="#mfo-reverse-allocation" th:attr="data-post-url=@{/admin/contribution-workspace/credits/allocations/{id}/reverse(id=${allocation.id})},data-reference=|Allocation ${allocation.id} - Credit ${allocation.credit.id}|,data-amount-label=${'BDT ' + #numbers.formatDecimal(allocation.amount,1,'COMMA',2,'POINT')},data-min-date=${allocation.appliedDate},data-period=${#temporals.format(allocation.contribution.contributionMonth,'MMMM yyyy')}">Reverse Allocation</button></td></tr></tbody></table></div>
+      </details>
+    </details>
+  </div>
+</section>
+</section>
+<div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-collection" aria-labelledby="mfo-collection-title" th:if="${foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-collection-title">Receive Additional Collection</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><form
+                                        method="post"
+                                        th:action="@{/admin/contribution-workspace/credits/receive}"
+                                        data-cs-transaction-form
+                                        data-cs-submit-confirm="Record this additional collection?" id="mfo-collection-form" class="mfo-scroll-form"><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><p class="cs-form-help">Record a verified additional receipt as available member credit. It does not automatically pay a monthly obligation or add to direct contribution cash.</p><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}">
+                                        <div class="cs-export-fields">
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="recvEmployeeId">Employee ID</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="recvEmployeeId"
+                                                    type="text"
+                                                    name="employeeId"
+                                                    th:value="${employeeId}"
+                                                    maxlength="80"
+                                                    placeholder="e.g. EMP-201"
+                                                    required readonly>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="recvAmount">Amount (BDT)</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="recvAmount"
+                                                    type="number"
+                                                    name="amount"
+                                                    min="0.01"
+                                                    step="0.01"
+                                                    required>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="recvDate">Collection Date</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="recvDate" th:attr="max=${today}"
+                                                    type="date"
+                                                    name="collectionDate"
+                                                    required>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="recvMethod">Payment Method</label>
+                                                <select
+                                                    class="cs-form-select"
+                                                    id="recvMethod"
+                                                    name="paymentMethod"
+                                                    required>
+                                                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                                                    <option value="BANK_DEPOSIT">Bank Deposit</option>
+                                                    <option value="CASH">Cash</option>
+                                                    <option value="OTHER">Other</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="recvReference">Reference Number</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="recvReference"
+                                                    name="referenceNo"
+                                                    maxlength="120"
+                                                    placeholder="Recommended for audit">
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="recvNotes">Notes</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="recvNotes"
+                                                    name="notes"
+                                                    maxlength="500"
+                                                    placeholder="Reason for additional collection">
+                                            </div>
+                                            
+                                        </div>
+                                    </div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary"><i class="bi bi-check-circle" aria-hidden="true"></i> Receive Additional Collection</button></div></form></div>
+<div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-apply-credit" aria-labelledby="mfo-apply-credit-title" th:if="${creditLoaded == true and foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-apply-credit-title">Apply Credit</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><form method="post" th:action="@{/admin/contribution-workspace}" class="mfo-scroll-form" data-mfo-bound-form="apply-credit" data-cs-transaction-form data-cs-submit-confirm="Apply this credit to the selected contribution?"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="employeeId" th:value="${employeeId}"><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><div class="mfo-bound-summary"><strong data-mfo-bound-reference>Select a record</strong><p data-mfo-bound-amount></p><p data-mfo-bound-available></p><p data-mfo-bound-maximum hidden></p><p data-mfo-bound-period></p></div><fieldset disabled data-mfo-bound-fields><p class="cs-form-help">Credit is applied to the selected member's contribution. Choose another reporting month in the workspace to manage a different obligation.</p><div class="mfo-selected-contribution" th:if="${paymentSummary != null}"><strong th:text="${#temporals.format(paymentSummary.contributionMonth,'MMMM yyyy')}"></strong><span th:text="${'Outstanding: BDT ' + #numbers.formatDecimal(paymentSummary.outstandingAmount,1,'COMMA',2,'POINT')}"></span></div><input type="hidden" name="contributionId" th:value="${contributionId}"><label class="cs-form-label" for="mfo-credit-apply-amount">Amount to Apply (BDT)</label><input class="cs-form-control" id="mfo-credit-apply-amount" name="amount" type="number" min="0.01" step="0.01" required><button type="button" class="cs-btn cs-btn-outline cs-btn-sm mfo-credit-full-outstanding" data-mfo-credit-full hidden>Apply Full Outstanding</button><label class="cs-form-label" for="mfo-credit-apply-date">Application Date</label><input class="cs-form-control" id="mfo-credit-apply-date" name="appliedDate" type="date" th:value="${today}" th:attr="max=${today}" required><p class="cs-form-help">The permitted amount is limited by available credit and outstanding obligation. The server validates both again under lock.</p></fieldset></div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary" disabled data-mfo-bound-submit>Apply Credit</button></div></form></div><div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-reverse-credit" aria-labelledby="mfo-reverse-credit-title" th:if="${creditLoaded == true and foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-reverse-credit-title">Reverse Collection</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><form method="post" th:action="@{/admin/contribution-workspace}" class="mfo-scroll-form" data-mfo-bound-form="reverse-credit" data-cs-transaction-form data-cs-submit-confirm="Confirm this financial reversal? The original history will be retained."><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="employeeId" th:value="${employeeId}"><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><div class="mfo-bound-summary"><strong data-mfo-bound-reference>Select a record</strong><p data-mfo-bound-amount></p><p data-mfo-bound-available></p><p data-mfo-bound-period></p></div><fieldset disabled data-mfo-bound-fields><p class="cs-form-help">Eligible only for unallocated credit whose original amount remains fully available. Reverse active allocations first where required.</p><div class="mfo-financial-notice"><strong>Review before reversing</strong><p>Original financial history will be retained. This is an accounting reversal, not an automatic bank refund.</p></div><label class="cs-form-label" for="mfo-reverse-credit-date">Reversal Date</label><input class="cs-form-control" id="mfo-reverse-credit-date" name="reversalDate" type="date" th:attr="max=${today}" required><label class="cs-form-label" for="mfo-reverse-credit-reason">Required Reversal Reason</label><textarea class="cs-form-control" id="mfo-reverse-credit-reason" name="reason" maxlength="500" rows="3" required></textarea></fieldset></div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary" disabled data-mfo-bound-submit>Reverse Collection</button></div></form></div><div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-reverse-allocation" aria-labelledby="mfo-reverse-allocation-title" th:if="${creditLoaded == true and foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-reverse-allocation-title">Reverse Allocation</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><form method="post" th:action="@{/admin/contribution-workspace}" class="mfo-scroll-form" data-mfo-bound-form="reverse-allocation" data-cs-transaction-form data-cs-submit-confirm="Confirm this financial reversal? The original history will be retained."><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="employeeId" th:value="${employeeId}"><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><div class="mfo-bound-summary"><strong data-mfo-bound-reference>Select a record</strong><p data-mfo-bound-amount></p><p data-mfo-bound-available></p><p data-mfo-bound-period></p></div><fieldset disabled data-mfo-bound-fields><p class="cs-form-help">Reversing an eligible allocation restores available credit and reopens the related obligation. The exact allocation period is shown above.</p><div class="mfo-financial-notice"><strong>Review before reversing</strong><p>Original financial history will be retained. This is an accounting reversal, not an automatic bank refund.</p></div><label class="cs-form-label" for="mfo-reverse-allocation-date">Reversal Date</label><input class="cs-form-control" id="mfo-reverse-allocation-date" name="reversalDate" type="date" th:attr="max=${today}" required><label class="cs-form-label" for="mfo-reverse-allocation-reason">Required Reversal Reason</label><textarea class="cs-form-control" id="mfo-reverse-allocation-reason" name="reason" maxlength="500" rows="3" required></textarea></fieldset></div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary" disabled data-mfo-bound-submit>Reverse Allocation</button></div></form></div><div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-reverse-payment" aria-labelledby="mfo-reverse-payment-title" th:if="${paymentSummary != null and foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-reverse-payment-title">Reverse Payment</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><form method="post" th:action="@{/admin/contribution-workspace}" class="mfo-scroll-form" data-mfo-bound-form="reverse-payment" data-cs-transaction-form data-cs-submit-confirm="Confirm this financial reversal? The original history will be retained."><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="employeeId" th:value="${employeeId}"><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><div class="mfo-bound-summary"><strong data-mfo-bound-reference>Select a record</strong><p data-mfo-bound-amount></p><p data-mfo-bound-available></p><p data-mfo-bound-period></p></div><fieldset disabled data-mfo-bound-fields><div class="mfo-financial-notice"><strong>Review before reversing</strong><p>Original financial history will be retained. This is an accounting reversal, not an automatic bank refund.</p></div><label class="cs-form-label" for="mfo-reverse-payment-date">Reversal Date</label><input class="cs-form-control" id="mfo-reverse-payment-date" name="reversalDate" type="date" th:attr="max=${today}" required><label class="cs-form-label" for="mfo-reverse-payment-reason">Required Reversal Reason</label><textarea class="cs-form-control" id="mfo-reverse-payment-reason" name="reason" maxlength="500" rows="3" required></textarea></fieldset></div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary" disabled data-mfo-bound-submit>Reverse Payment</button></div></form></div>
+  <div class="offcanvas offcanvas-end mfo-action-drawer" tabindex="-1" id="mfo-allocate" aria-labelledby="mfo-allocate-title" th:if="${foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-allocate-title">Allocate Shares</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName} - ${#temporals.format(selectedMonth,'MMM yyyy')}|"></p><form
+                                        method="post"
+                                        th:action="@{/admin/contribution-workspace/shares/allocate}"
+                                        data-cs-transaction-form
+                                        th:attr="data-cs-submit-confirm='Allocate shares for this employee?'"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}">
+                                        <div class="cs-form-grid">
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateEmployeeId">Employee ID</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateEmployeeId"
+                                                    name="employeeId"
+                                                    th:value="${employeeId}"
+                                                    required readonly>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateEmployeeName">Employee Name</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateEmployeeName"
+                                                    type="text"
+                                                    th:value="${foundEmployee != null ? foundEmployee.fullName : ''}"
+                                                    placeholder="Find employee first"
+                                                    readonly>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <p class="cs-form-help" id="mfo-allocation-note">Existing categories cannot be allocated again. Use Adjust Quantity on the existing holding.</p><label class="cs-form-label" for="allocateCategory">Share Category</label>
+                                                <select
+                                                    class="cs-form-select"
+                                                    aria-describedby="mfo-allocation-note" id="allocateCategory"
+                                                    name="shareCategory"
+                                                    required>
+                                                    <option value="" selected disabled>Select available category</option>
+                                                    <option value="NEW" th:disabled="${#lists.contains(holdingCategories,'NEW')}">NEW</option>
+                                                    <option value="OLD" th:disabled="${#lists.contains(holdingCategories,'OLD')}">OLD</option>
+                                                </select>
+                                            </div>
+
+                                            <div id="existingShareCategories" hidden>
+                                                <span
+                                                    th:each="h : ${holdings}"
+                                                    th:attr="data-category=${h.shareCategory}"></span>
+                                            </div>
+
+                                            <div
+                                                id="duplicateShareWarning"
+                                                class="alert alert-warning mt-2 mb-0"
+                                                role="alert"
+                                                hidden>
+                                                This employee already has a holding in this share category. Use Manage Holding → Adjust Quantity instead.
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateQuantity">Number of Shares</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateQuantity"
+                                                    type="number"
+                                                    name="quantity"
+                                                    min="1"
+                                                    step="1"
+                                                    required>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateRate">Monthly rate per share (BDT)</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateRate"
+                                                    type="number"
+                                                    name="monthlyRatePerShare"
+                                                    min="0.01"
+                                                    step="0.01"
+                                                    required>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateMonthlyContribution">Expected Total Monthly Contribution (BDT)</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateMonthlyContribution"
+                                                    type="text"
+                                                    placeholder="0.00"
+                                                    readonly>
+                                                <small class="text-muted d-block mt-1">Number of Shares × Monthly Rate per Share. This is not a payment received.</small>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateShareValue">Share Value per Share (BDT) (Optional)</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateShareValue"
+                                                    type="number"
+                                                    name="shareValuePerShare"
+                                                    min="0.01"
+                                                    step="0.01"
+                                                    placeholder="Enter approved share value">
+                                                <small class="text-muted d-block mt-1">Leave blank if approved valuation is unavailable.</small>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateTotalShareValue">Total Share Value (BDT)</label>
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateTotalShareValue"
+                                                    type="text"
+                                                    placeholder="N/A"
+                                                    readonly>
+                                                <small class="text-muted d-block mt-1">Number of Shares × Share Value per Share.</small>
+                                            </div>
+
+                                            <div class="cs-form-group">
+                                                <label class="cs-form-label" for="allocateDate">Share Allocation Effective Date</label>
+
+                                                <input
+                                                    class="cs-form-control"
+                                                    id="allocateDate"
+                                                    type="date"
+                                                    name="effectiveDate"
+                                                    required>
+
+                                                <small class="text-muted d-block mt-1">Past and current allocations apply to the selected calendar period, subject to fund membership eligibility. Future allocations remain scheduled and do not affect current balances until effective.</small>
+
+                                                <small
+                                                    class="d-block mt-2 fw-semibold text-success"
+                                                    id="allocateDatePreview">Select an effective date</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="cs-form-actions">
+                                            <button type="submit" class="cs-btn cs-btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Allocate shares</button>
+                                        </div>
+                                    </form></div></div><div class="offcanvas offcanvas-end mfo-action-drawer" tabindex="-1" id="mfo-adjust" aria-labelledby="mfo-adjust-title" th:if="${selectedHolding != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-adjust-title">Adjust Share Quantity</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName} - ${#temporals.format(selectedMonth,'MMM yyyy')}|"></p><p>Share Category: <strong th:text="${selectedHolding.shareCategory}"></strong></p><p>Current Share quantity: <strong id="mfo-current-quantity" th:text="${selectedHolding.shareQuantity}"></strong></p><p>Resulting quantity: <strong id="mfo-result-quantity">Enter a change</strong></p><form
+                                                method="post"
+                                                th:action="@{/admin/contribution-workspace/shares/{id}/adjust(id=${holdingId})}"
+                                                data-cs-transaction-form
+                                                th:attr="data-cs-submit-confirm='Apply this quantity adjustment?'"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}">
+                                                <input type="hidden" name="employeeId" th:value="${employeeId}">
+                                                <h3
+                                                    class="cs-card-title"
+                                                    style="font-size:.9rem;margin-bottom:12px;">Adjust quantity</h3>
+
+                                                <div class="cs-form-group" style="margin-bottom:12px;">
+                                                    <label class="cs-form-label" for="adjustQty">Quantity change (+ / &minus;)</label>
+                                                    <input
+                                                        class="cs-form-control"
+                                                        id="adjustQty"
+                                                        type="number"
+                                                        name="quantityChange"
+                                                        step="1"
+                                                        required>
+                                                    <p class="cs-form-help">Use a positive value to increase, negative to decrease. Not a cash withdrawal.</p>
+                                                </div>
+
+                                                <div class="cs-form-group" style="margin-bottom:12px;">
+                                                    <label class="cs-form-label" for="adjustDate">Quantity Adjustment Effective Date</label>
+                                                    <input
+                                                        class="cs-form-control"
+                                                        id="adjustDate"
+                                                        type="date"
+                                                        name="effectiveDate"
+                                                        required>
+                                                    <small class="text-muted d-block mt-1">Past, current, and future dates are allowed from the holding allocation date. Later transactions remain preserved, and the system checks that no effective balance becomes negative.</small>
+
+                                                    <small
+                                                        class="d-block mt-2 fw-semibold text-success"
+                                                        id="adjustDatePreview">Select an effective date</small>
+                                                </div>
+
+                                                <div class="cs-form-group" style="margin-bottom:12px;">
+                                                    <label class="cs-form-label" for="adjustReason">Reason</label>
+                                                    <input
+                                                        class="cs-form-control"
+                                                        id="adjustReason"
+                                                        name="reason"
+                                                        maxlength="500"
+                                                        required>
+                                                </div>
+                                                <button class="cs-btn cs-btn-outline" type="submit">Apply adjustment</button>
+                                            </form></div></div><div class="offcanvas offcanvas-end mfo-action-drawer" tabindex="-1" id="mfo-rate" aria-labelledby="mfo-rate-title" th:if="${selectedHolding != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-rate-title">Change Monthly Rate</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName} - ${#temporals.format(selectedMonth,'MMM yyyy')}|"></p><p>Category: <strong th:text="${selectedHolding.shareCategory}"></strong></p><p>Current rate: BDT <strong th:text="${selectedHolding.monthlyRatePerShare}"></strong>. An approved rate change applies to the full calendar month containing its effective date.</p><form
+                                                method="post"
+                                                th:action="@{/admin/contribution-workspace/shares/{id}/rate(id=${holdingId})}"
+                                                data-cs-transaction-form
+                                                th:attr="data-cs-submit-confirm='Apply this rate change?'"><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}">
+                                                <input type="hidden" name="employeeId" th:value="${employeeId}">
+                                                <h3
+                                                    class="cs-card-title"
+                                                    style="font-size:.9rem;margin-bottom:12px;">Change monthly rate</h3>
+
+                                                <div class="cs-form-group" style="margin-bottom:12px;">
+                                                    <label class="cs-form-label" for="newRate">New rate (BDT)</label>
+                                                    <input
+                                                        class="cs-form-control"
+                                                        id="newRate"
+                                                        type="number"
+                                                        name="monthlyRatePerShare"
+                                                        step="0.01"
+                                                        min="0.01"
+                                                        required>
+                                                </div>
+
+                                                <div class="cs-form-group" style="margin-bottom:12px;">
+                                                    <label class="cs-form-label" for="rateDate">Rate Change Effective Date</label>
+                                                    <input
+                                                        class="cs-form-control"
+                                                        id="rateDate"
+                                                        type="date"
+                                                        name="effectiveDate"
+                                                        required>
+                                                    <small class="text-muted d-block mt-1">Past, current, and future dates are allowed from the holding allocation date. Same-date corrections are appended with their reason, recorded time, and administrator.</small>
+
+                                                    <small
+                                                        class="d-block mt-2 fw-semibold text-success"
+                                                        id="rateDatePreview">Select an effective date</small>
+                                                </div>
+
+                                                <div class="cs-form-group" style="margin-bottom:12px;">
+                                                    <label class="cs-form-label" for="rateReason">Reason</label>
+                                                    <input
+                                                        class="cs-form-control"
+                                                        id="rateReason"
+                                                        name="reason"
+                                                        maxlength="500"
+                                                        required>
+                                                </div>
+                                                <button class="cs-btn cs-btn-outline" type="submit">Apply rate change</button>
+                                            </form></div></div><div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-value" aria-labelledby="mfo-value-title" th:if="${selectedHolding != null and foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-value-title">Change Share Value</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><form method="post" class="mfo-scroll-form" data-cs-transaction-form th:action="@{/admin/contribution-workspace/shares/{id}/value(id=${holdingId})}" th:attr="data-cs-submit-confirm='Record this share valuation change?'">
+<input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}"><input type="hidden" name="employeeId" th:value="${employeeId}">
+<div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><p>Share Category: <strong th:text="${selectedHolding.shareCategory}"></strong></p><section class="mfo-payment-overview" aria-label="Current share valuation"><dl><div><dt>Current Share Quantity</dt><dd th:text="${selectedHolding.shareQuantity}"></dd></div><div><dt>Current Share Value per Share</dt><dd th:text="${selectedHolding.shareValuePerShare != null ? 'BDT ' + #numbers.formatDecimal(selectedHolding.shareValuePerShare,1,'COMMA',2,'POINT') : 'Not recorded'}"></dd></div><div class="mfo-outstanding-line"><dt>Current Total Share Value</dt><dd th:text="${selectedHolding.totalShareValue != null ? 'BDT ' + #numbers.formatDecimal(selectedHolding.totalShareValue,1,'COMMA',2,'POINT') : 'Not recorded'}"></dd></div></dl></section>
+<label class="cs-form-label" for="mfo-new-share-value">New Share Value per Share (BDT)</label><input class="cs-form-control" id="mfo-new-share-value" name="shareValuePerShare" type="number" min="0.01" step="0.01" required th:attr="data-share-quantity=${selectedHolding.shareQuantity}">
+<p class="cs-form-help">New Total Share Value: <strong id="mfo-new-total-share-value" aria-live="polite">Enter a valid new value.</strong></p>
+<label class="cs-form-label" for="mfo-share-value-date">Effective Date</label><input class="cs-form-control" id="mfo-share-value-date" name="effectiveDate" type="date" required th:value="${today}"><small class="cs-form-help">The selected date is recorded exactly. Future valuations stay scheduled and do not affect current totals before that date.</small>
+<label class="cs-form-label" for="mfo-share-value-reason">Reason</label><textarea class="cs-form-control" id="mfo-share-value-reason" name="reason" maxlength="500" rows="3" required></textarea><p class="cs-form-help">This updates share valuation only. Monthly Contribution Rate and contribution calculations are unchanged.</p></div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary">Save Share Value</button></div></form></div><div class="offcanvas offcanvas-end mfo-action-drawer mfo-sticky-drawer" tabindex="-1" id="mfo-payment" aria-labelledby="mfo-payment-title" th:if="${foundEmployee != null}"><div class="offcanvas-header"><h2 class="h5" id="mfo-payment-title">Record Contribution Payment</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div><div class="offcanvas-body" th:if="${paymentSummary == null}"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><div class="mfo-empty-state"><i class="bi bi-receipt" aria-hidden="true"></i><div><strong>No Contribution Record Available</strong><p>No monthly contribution obligation exists for this employee and selected period.</p><a class="cs-btn cs-btn-outline cs-btn-sm" th:href="@{/admin/contributions/new(employeeId=${employeeId},year=${year},month=${month})}">Open Contribution Workflow</a></div></div></div><div class="offcanvas-body" th:if="${paymentSummary != null and (paymentSummary.status.name() != 'PENDING' or paymentSummary.outstandingAmount.signum() <= 0)}"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><div class="mfo-payment-period"><span>Contribution Period: <strong th:text="${#temporals.format(paymentSummary.contributionMonth,'MMMM yyyy')}"></strong></span><span class="cs-status" th:text="${paymentSummary.status}" th:classappend="${paymentSummary.status.name() == 'PAID' ? 'cs-status-paid' : 'cs-status-canceled'}"></span></div><section class="mfo-payment-overview" aria-label="Contribution settlement summary"><dl><div><dt>Monthly Contribution Due</dt><dd th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.expectedAmount,1,'COMMA',2,'POINT')}"></dd></div><div><dt>Net Cash Received</dt><dd th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.collectedAmount,1,'COMMA',2,'POINT')}"></dd></div><div><dt>Applied Member Credit</dt><dd th:text="${paymentAppliedCredit != null ? 'BDT ' + #numbers.formatDecimal(paymentAppliedCredit,1,'COMMA',2,'POINT') : 'Unavailable'}"></dd></div><div class="mfo-outstanding-line"><dt>Remaining Outstanding</dt><dd th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.outstandingAmount,1,'COMMA',2,'POINT')}"></dd></div></dl></section><p class="cs-form-help">No additional payment is available for this obligation. Review its payment history below.</p><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas" data-mfo-open-details="#mfo-payment-history">View Payment History</button></div><form
+                                method="post"
+                                th:if="${paymentSummary != null and paymentSummary.status.name() == 'PENDING' and paymentSummary.outstandingAmount.signum() > 0}"
+                                th:action="@{/admin/contribution-workspace/payments/{id}/receive(id=${paymentSummary.contributionId})}"
+                                data-cs-transaction-form
+                                data-cs-skip-submit-confirm="true"
+                                th:attr="data-cs-submit-confirm='Record this payment? Amount cannot exceed the outstanding balance.'" id="mfo-payment-form" class="mfo-scroll-form"><div class="offcanvas-body"><p class="mfo-drawer-context" th:text="|${foundEmployee.employeeId} - ${foundEmployee.fullName}|"></p><div class="mfo-payment-period"><span>Contribution Period: <strong th:text="${#temporals.format(paymentSummary.contributionMonth,'MMMM yyyy')}"></strong></span><span class="cs-status cs-status-pending" th:text="${paymentSummary.status}"></span></div><section class="mfo-payment-overview" aria-label="Contribution settlement summary"><dl><div><dt>Monthly Contribution Due</dt><dd id="mfo-payment-due" th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.expectedAmount,1,'COMMA',2,'POINT')}"></dd></div><div><dt>Net Cash Received</dt><dd id="mfo-payment-cash" th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.collectedAmount,1,'COMMA',2,'POINT')}"></dd></div><div><dt>Applied Member Credit</dt><dd id="mfo-payment-credit" th:text="${paymentAppliedCredit != null ? 'BDT ' + #numbers.formatDecimal(paymentAppliedCredit,1,'COMMA',2,'POINT') : 'Unavailable'}"></dd></div><div class="mfo-outstanding-line"><dt>Remaining Outstanding</dt><dd id="mfo-payment-outstanding" th:text="${'BDT ' + #numbers.formatDecimal(paymentSummary.outstandingAmount,1,'COMMA',2,'POINT')}"></dd></div></dl><p class="cs-form-help">Cash and applied credit are separate. The server checks the current balance again before posting.</p></section><input type="hidden" name="workspaceContext" value="member-operations"><input type="hidden" name="contextYear" th:value="${year}"><input type="hidden" name="contextMonth" th:value="${month}"><input type="hidden" name="contextEmployeeId" th:value="${employeeId}"><input type="hidden" name="contextStatus" th:value="${operationStatus}">
+                                <h3 class="cs-card-title" style="font-size:.9rem;margin-bottom:12px;">Receive payment</h3>
+                                <div class="cs-export-fields">
+
+                                    <div class="cs-form-group" style="flex:1 1 150px;">
+                                        <label class="cs-form-label" for="payAmount">Payment amount (BDT)</label>
+                                        <input
+                                            class="cs-form-control"
+                                            id="payAmount" th:value="${paymentSummary.outstandingAmount.toPlainString()}" th:attr="max=${paymentSummary.outstandingAmount}"
+                                            type="number"
+                                            name="amount"
+                                            min="0.01"
+                                            step="0.01"
+                                            required><small class="cs-form-help">The remaining balance is prefilled. Edit it to record an actual partial payment.</small>
+                                    </div>
+
+                                    <div class="cs-form-group" style="flex:1 1 150px;">
+                                        <label class="cs-form-label" for="payDate">Payment date</label>
+                                        <input
+                                            class="cs-form-control"
+                                            id="payDate" th:value="${today}" th:attr="max=${today}"
+                                            type="date"
+                                            name="paymentDate"
+                                            required>
+                                    </div>
+
+                                    <div class="cs-form-group" style="flex:1 1 150px;">
+                                        <label class="cs-form-label" for="payMethod">Method</label>
+                                        <select class="cs-form-select" id="payMethod" name="paymentMethod">
+                                            <option value="BANK_TRANSFER">Bank transfer</option>
+                                            <option value="HO_HAND">HO-Hand</option>
+                                            <option value="BANK_FT">Bank FT</option>
+                                            <option value="ITD_HAND">ITD-Hand</option>
+                                            <option value="BANK_DEPOSIT">Bank deposit</option>
+                                            <option value="CASH">Cash</option>
+                                            <option value="OTHER">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="cs-form-group" style="flex:1 1 150px;">
+                                        <label class="cs-form-label" for="payRef">Reference</label>
+                                        <input
+                                            class="cs-form-control"
+                                            id="payRef"
+                                            name="referenceNo"
+                                            maxlength="120">
+                                    </div>
+
+                                    <div class="cs-form-group" style="flex:1 1 180px;">
+                                        <label class="cs-form-label" for="payNotes">Notes</label>
+                                        <input
+                                            class="cs-form-control"
+                                            id="payNotes"
+                                            name="notes"
+                                            maxlength="500">
+                                    </div>
+                                    
+                                </div>
+                                <p class="cs-export-note"><i class="bi bi-shield-check" aria-hidden="true"></i> Partial payment keeps the due PENDING; full collection marks it PAID. The server re-validates the amount against the outstanding balance.</p>
+                            </div><div class="mfo-drawer-footer"><button type="button" class="cs-btn cs-btn-outline" data-bs-dismiss="offcanvas">Cancel</button><button type="submit" class="cs-btn cs-btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Confirm Payment</button></div></form></div>
+</section></body></html>

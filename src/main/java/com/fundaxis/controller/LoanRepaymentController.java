@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -166,9 +167,9 @@ public class LoanRepaymentController {
     ///---------- Complete A Processing Repayment ----------
     @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<LoanRepayment> completeLoanRepayment(@PathVariable Long id, @RequestParam String processedBy) {
+    public ResponseEntity<LoanRepayment> completeLoanRepayment(@PathVariable Long id, Authentication authentication) {
 
-        return ResponseEntity.ok(loanRepaymentService.completeLoanRepayment(id, processedBy));
+        return ResponseEntity.ok(loanRepaymentService.completeLoanRepayment(id, authentication.getName()));
 
     }
 

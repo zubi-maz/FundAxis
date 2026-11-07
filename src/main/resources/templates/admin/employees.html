@@ -1,10 +1,28 @@
-<!--- FundAxis Admin Employee Management (GET /admin/employees). ADMIN only: backend authorization stays authoritative. --->
-
+<!-- FundAxis Admin Employee Management (GET /admin/employees). ADMIN only: backend authorization stays authoritative. -->
+<!--
+  =============================================================================
+  FundAxis Admin - Employee Management (employees.html)
+  =============================================================================
+  Main Functions & Features:
+  - Master Directory Table: Displays all registered employees with dynamic
+    serial numbering (SL), role designations, and status badges.
+  - Search & Filtering Toolbar: Enables instant filtering by keyword (ID/name),
+    account status (ACTIVE/INACTIVE), and professional designation.
+  - Dual Excel Export Suite: Supports complete master list downloads and
+    targeted custom date-range report exports.
+  - Lifecycle Actions & Modals: Provides inline row actions for viewing profiles,
+    editing records, and handling secure activation/deactivation workflows
+    with mandatory audit reason inputs.
+  - Dynamic Pagination: Manages large datasets while preserving search parameters
+    and filter states across page navigation.
+  =============================================================================
+-->
 <!DOCTYPE html>
 <html lang="en"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
@@ -28,7 +46,7 @@
     <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
         <div class="fa-sidebar-brand">
             <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">
-                <img th:src="@{/images/fundaxis-logo.png}" alt="FundAxis" class="fa-brand-logo">
+                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
                 <span class="fa-brand-text">FundAxis</span>
             </a>
             <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">
@@ -38,29 +56,44 @@
 
         <nav class="fa-sidebar-nav">
 
+            <!-- Dashboard -->
             <p class="fa-nav-heading">Dashboard</p>
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/dashboard}" class="fa-nav-link"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span></a></li>
             </ul>
 
-            <p class="fa-nav-heading">Administration</p>
+            <!-- Employee and Fund Management -->
+            <p class="fa-nav-heading">Employee &amp; Fund</p>
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/employees}" class="fa-nav-link active" aria-current="page"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>
-                <li><a th:href="@{/admin/contributions}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
+            </ul>
+
+            <!-- Loan Management -->
+            <p class="fa-nav-heading">Loan Management</p>
+            <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/loans}" class="fa-nav-link"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>
                 <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>
                 <li><a th:href="@{/admin/disbursements}" class="fa-nav-link"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Loan Disbursements</span></a></li>
+            </ul>
+
+            <!-- Repayment Management -->
+            <p class="fa-nav-heading">Repayment Management</p>
+            <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/repayment-schedules}" class="fa-nav-link"><i class="bi bi-calendar-check" aria-hidden="true"></i><span>Repayment Schedules</span></a></li>
                 <li><a th:href="@{/admin/repayments}" class="fa-nav-link"><i class="bi bi-receipt" aria-hidden="true"></i><span>Repayments</span></a></li>
             </ul>
 
+            <!-- Security and Access -->
             <p class="fa-nav-heading">Security &amp; Access</p>
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/user-accounts}" class="fa-nav-link"><i class="bi bi-person-gear" aria-hidden="true"></i><span>User Accounts</span></a></li>
                 <li><a th:href="@{/admin/roles}" class="fa-nav-link"><i class="bi bi-shield-lock" aria-hidden="true"></i><span>Role Management</span></a></li>
             </ul>
 
-            <p class="fa-nav-heading">Account</p>
+            <!-- Account and Security -->
+            <p class="fa-nav-heading">Account &amp; Security</p>
             <ul class="fa-nav-list">
                 <li>
                     <a th:href="@{/change-password}" class="fa-nav-link">
@@ -133,31 +166,35 @@
         </header>
 
         <!-- Search/filter state taken from the GET query string:
-             kw = keyword, st = status (ALL when missing), hasFilter = any real filter applied,
+             kw = keyword, st = status (ALL when missing), designation = designation filter, hasFilter = any real filter applied,
              resultCount = number of matching employees (totalElements for a Spring Data Page, otherwise the list size) -->
-        <main class="fa-content" id="main-content" tabindex="-1"
+        <main class="fa-content fa-emp-page" id="main-content" tabindex="-1"
               th:with="kw=${param.keyword != null ? #strings.trim(param.keyword[0]) : ''},
                        st=${param.status != null ? param.status[0] : 'ALL'},
+                       desig=${param.employeeDesignation != null ? param.employeeDesignation[0] : 'ALL'},
                        hasKw=${!#strings.isEmpty(kw)},
                        hasStatus=${!#strings.isEmpty(st) and st != 'ALL'},
-                       hasFilter=${hasKw or hasStatus},
+                       hasDesig=${!#strings.isEmpty(desig) and desig != 'ALL'},
+                       hasFilter=${hasKw or hasStatus or hasDesig},
                        resultCount=${totalElements != null ? totalElements : (employees != null ? #lists.size(employees) : 0)}">
 
-            <!-- FundAxis Admin Employee Management -->
-            <div class="fa-page-header flex-wrap">
+            <!-- FundAxis Admin Employee Management Hero Header -->
+            <div class="fa-emp-hero d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div>
                     <h1 class="fa-page-title">Employee Management</h1>
                     <p class="fa-page-subtitle">Manage FundAxis employee records, account status and employee information from one secure workspace.</p>
                     <nav aria-label="Breadcrumb">
-                        <ol class="breadcrumb fa-breadcrumb">
+                        <ol class="breadcrumb fa-breadcrumb mb-0">
                             <li class="breadcrumb-item"><a th:href="@{/admin/dashboard}">Dashboard</a></li>
                             <li class="breadcrumb-item active" aria-current="page">Employee Management</li>
                         </ol>
                     </nav>
                 </div>
-                <a th:href="@{/admin/employees/new}" class="fa-btn fa-btn-primary">
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i> Add Employee
-                </a>
+                <div>
+                    <a th:href="@{/admin/employees/new}" class="fa-btn fa-btn-primary bg-white text-dark fw-bold border-0 px-4 py-2 shadow-sm" style="color: var(--fa-green) !important;">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Add Employee
+                    </a>
+                </div>
             </div>
 
             <!-- Global alert messages -->
@@ -185,61 +222,119 @@
             </div>
 
             <!-- Employee summary cards: always the FULL employee dataset (only the table below is filtered) -->
-            <section class="row g-3 mb-3" aria-label="Employee summary">
+            <section class="row g-3 mb-4" aria-label="Employee summary">
                 <div class="col-12 col-md-4">
-                    <div class="fa-card fa-stat-card">
-                        <span class="fa-stat-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+                    <div class="fa-emp-stat">
+                        <span class="fa-emp-stat-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
                         <div>
-                            <p class="fa-stat-label">Total Employees</p>
-                            <p class="fa-stat-value" th:text="${totalEmployees != null ? totalEmployees : '--'}">--</p>
+                            <p class="fa-emp-stat-label">Total Employees</p>
+                            <p class="fa-emp-stat-value" th:text="${totalEmployees != null ? totalEmployees : '--'}">--</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
-                    <div class="fa-card fa-stat-card">
-                        <span class="fa-stat-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                    <div class="fa-emp-stat">
+                        <span class="fa-emp-stat-icon emerald"><i class="bi bi-person-check" aria-hidden="true"></i></span>
                         <div>
-                            <p class="fa-stat-label">Active Employees</p>
-                            <p class="fa-stat-value" th:text="${activeEmployees != null ? activeEmployees : '--'}">--</p>
+                            <p class="fa-emp-stat-label">Active Employees</p>
+                            <p class="fa-emp-stat-value" th:text="${activeEmployees != null ? activeEmployees : '--'}">--</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
-                    <div class="fa-card fa-stat-card">
-                        <span class="fa-stat-icon"><i class="bi bi-person-dash" aria-hidden="true"></i></span>
+                    <div class="fa-emp-stat">
+                        <span class="fa-emp-stat-icon amber"><i class="bi bi-person-dash" aria-hidden="true"></i></span>
                         <div>
-                            <p class="fa-stat-label">Inactive Employees</p>
-                            <p class="fa-stat-value" th:text="${inactiveEmployees != null ? inactiveEmployees : '--'}">--</p>
+                            <p class="fa-emp-stat-label">Inactive Employees</p>
+                            <p class="fa-emp-stat-value" th:text="${inactiveEmployees != null ? inactiveEmployees : '--'}">--</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Employee search and filter (GET /admin/employees?keyword=...&status=...) -->
-            <section class="fa-card fa-toolbar mb-3" aria-label="Search and filter employees">
+            <!-- Employee search and filter (GET /admin/employees?keyword=...&status=...&employeeDesignation=...) -->
+            <section class="fa-emp-toolbar mb-4" aria-label="Search and filter employees">
                 <form method="get" th:action="@{/admin/employees}" class="row g-3 align-items-end">
-                    <div class="col-12 col-lg-6">
+                    <div class="col-12 col-lg-4">
                         <label for="employeeSearch" class="fa-label">Search</label>
-                        <!-- The entered keyword stays visible after searching -->
-                        <input type="search" class="form-control fa-input" id="employeeSearch" name="keyword"
-                               placeholder="Search by Employee ID, name or email" autocomplete="off"
-                               th:value="${kw}">
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent text-muted"><i class="bi bi-search"></i></span>
+                            <input type="search" class="form-control fa-input border-start-0" id="employeeSearch" name="keyword"
+                                   placeholder="Search by Employee ID, name" autocomplete="off"
+                                   th:value="${kw}">
+                        </div>
                     </div>
                     <div class="col-12 col-sm-6 col-lg-3">
                         <label for="employeeStatusFilter" class="fa-label">Status</label>
-                        <!-- The selected status stays selected after filtering -->
                         <select class="form-select fa-input" id="employeeStatusFilter" name="status">
                             <option value="ALL" th:selected="${!hasStatus}">ALL</option>
                             <option value="ACTIVE" th:selected="${st == 'ACTIVE'}">ACTIVE</option>
                             <option value="INACTIVE" th:selected="${st == 'INACTIVE'}">INACTIVE</option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-3 d-flex gap-2">
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="designationFilter" class="fa-label">Designation</label>
+                        <select class="form-select fa-input" id="designationFilter" name="employeeDesignation">
+                            <option value="ALL" th:selected="${!hasDesig}">ALL</option>
+                            <option th:each="d : ${designations}" th:value="${d}" th:text="${d}" th:selected="${desig == '' + d}">DESIGNATION</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-3 d-flex gap-2">
                         <button type="submit" class="fa-btn fa-btn-primary flex-fill"><i class="bi bi-search" aria-hidden="true"></i> Search</button>
                         <a th:href="@{/admin/employees}" class="fa-btn fa-btn-outline flex-fill">Clear</a>
                     </div>
                 </form>
             </section>
+
+            <!-- Excel Report Export Section - Split into Two Clear Cards -->
+            <div class="row g-3 mb-4">
+
+                <!-- Card 1: Complete Master List Export -->
+                <div class="col-12 col-xl-5">
+                    <div class="fa-emp-export-card">
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">
+                                <i class="bi bi-file-earmark-excel-fill text-success me-2" aria-hidden="true"></i>Complete Master List
+                            </h6>
+                            <p class="text-muted small mb-3">Download every employee record from the beginning to the present instantly without date filters.</p>
+                        </div>
+                        <div>
+                            <a th:href="@{/admin/employees/export/excel}" class="fa-btn fa-btn-primary w-100 fw-bold py-2 text-center" style="background-color: #024731; border-color: #024731;">
+                                <i class="bi bi-download me-1" aria-hidden="true"></i> Download Entire List
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Custom Date Range Export -->
+                <div class="col-12 col-xl-7">
+                    <div class="fa-emp-export-card">
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">
+                                <i class="bi bi-calendar-range text-success me-2" aria-hidden="true"></i>Custom Date Range Export
+                            </h6>
+                            <p class="text-muted small mb-2">Select a specific join date window to export records within that timeframe.</p>
+                        </div>
+
+                        <form th:action="@{/admin/employees/export/excel}" method="GET" class="row g-2 align-items-end">
+                            <div class="col-12 col-sm-4">
+                                <label for="startDate" class="fa-label small fw-bold text-secondary">Join Date From</label>
+                                <input type="date" id="startDate" name="startDate" class="form-control form-control-sm fa-input" required />
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <label for="endDate" class="fa-label small fw-bold text-secondary">Join Date To</label>
+                                <input type="date" id="endDate" name="endDate" class="form-control form-control-sm fa-input" required />
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <button type="submit" class="fa-btn fa-btn-primary w-100 fw-bold btn-sm py-2" style="background-color: #024731; border-color: #024731;">
+                                    <i class="bi bi-filter me-1" aria-hidden="true"></i> Export Range
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
 
             <!-- Employee records table -->
             <section class="fa-card" aria-labelledby="faEmployeesTitle">
@@ -251,19 +346,8 @@
                         <!-- No filter -->
                         <span th:if="${!hasFilter}">Showing <strong th:text="${resultCount}">0</strong>
                             <span th:text="${resultCount == 1 ? 'employee' : 'employees'}">employees</span></span>
-                        <!-- Keyword only -->
-                        <span th:if="${hasKw and !hasStatus}">Showing <strong th:text="${resultCount}">0</strong>
-                            <span th:text="${resultCount == 1 ? 'result' : 'results'}">results</span>
-                            for &ldquo;<strong th:text="${kw}">EMP003</strong>&rdquo;</span>
-                        <!-- Status only -->
-                        <span th:if="${!hasKw and hasStatus}">Showing <strong th:text="${resultCount}">0</strong>
-                            <span th:text="${#strings.toUpperCase(st)}">ACTIVE</span>
-                            <span th:text="${resultCount == 1 ? 'employee' : 'employees'}">employees</span></span>
-                        <!-- Keyword and status -->
-                        <span th:if="${hasKw and hasStatus}">Showing <strong th:text="${resultCount}">0</strong>
-                            <span th:text="${resultCount == 1 ? 'result' : 'results'}">results</span>
-                            for &ldquo;<strong th:text="${kw}">EMP003</strong>&rdquo;
-                            with status <span th:text="${#strings.toUpperCase(st)}">ACTIVE</span></span>
+                        <!-- Filter applied -->
+                        <span th:if="${hasFilter}">Showing <strong th:text="${resultCount}">0</strong> matching records</span>
                     </p>
                 </div>
                 <div class="table-responsive">
@@ -271,42 +355,73 @@
                         <caption class="visually-hidden">FundAxis employee records</caption>
                         <thead>
                         <tr>
+                            <th scope="col" class="fa-col-sl">SL</th>
                             <th scope="col">Employee ID</th>
                             <th scope="col">Full Name</th>
-                            <th scope="col">Email</th>
-                            <th scope="col">Phone Number</th>
+                            <th scope="col">Designation</th>
                             <th scope="col">Status</th>
                             <th scope="col">Created Date</th>
                             <th scope="col">Actions</th>
                         </tr>
                         </thead>
                         <tbody>
-                        <tr th:each="e : ${employees}"
+                        <!--
+                        1. Added ', stat' to the th:each loop.
+                           The 'stat' object tracks iteration details like the current row count.
+                        -->
+                        <tr th:each="e, stat : ${employees}"
                             th:with="isActive=${e.employeeStatus != null and #strings.toUpperCase(e.employeeStatus) == 'ACTIVE'}">
-                            <td class="fa-cell-id" th:text="${e.employeeId}">EMP-001</td>
-                            <td th:text="${e.fullName}">Full Name</td>
-                            <td class="text-break" th:text="${e.email != null ? e.email : '--'}">email@example.com</td>
-                            <td th:text="${e.phoneNumber != null ? e.phoneNumber : '--'}">--</td>
+
+                            <!-- 2. Serial Number column: prints the current row index calculated across pagination pages -->
+                            <td class="fa-col-sl" th:text="${((currentPage != null ? currentPage : 0) * (pageSize != null ? pageSize : 0)) + stat.count}">1</td>
+
+                            <!-- Employee ID column -->
+                            <td class="fa-cell-id">
+                                <span class="badge text-bg-light border font-monospace px-2 py-1" th:text="${e.employeeId}">EMP-001</span>
+                            </td>
+
+                            <!-- Full Name column -->
                             <td>
-                                <!-- Status is shown as text as well as colour -->
-                                <span class="fa-status"
-                                      th:classappend="${isActive} ? 'fa-status-success' : 'fa-status-neutral'"
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fa-emp-avatar" th:text="${#strings.substring(e.fullName, 0, 1)}">J</span>
+                                    <span class="fw-semibold text-dark" th:text="${e.fullName}">Full Name</span>
+                                </div>
+                            </td>
+
+                            <!-- Designation column -->
+                            <td>
+                                <span class="fa-emp-desig-pill" th:if="${e.employeeDesignation != null and !#strings.isEmpty(e.employeeDesignation)}" th:text="${e.employeeDesignation}">EO</span>
+                                <span class="badge text-bg-light text-muted border" th:unless="${e.employeeDesignation != null and !#strings.isEmpty(e.employeeDesignation)}">Not assigned</span>
+                            </td>
+
+                            <!-- Status column -->
+                            <td>
+                                <span class="fa-emp-status-dot"
+                                      th:classappend="${isActive} ? 'active' : 'inactive'"
                                       th:text="${e.employeeStatus != null ? e.employeeStatus : '--'}">ACTIVE</span>
                             </td>
-                            <td th:text="${e.createdAt != null ? #temporals.format(e.createdAt, 'dd MMM yyyy') : '--'}">--</td>
+
+                            <!-- Creation Date column -->
+                            <td class="text-secondary" th:text="${e.createdAt != null ? #temporals.format(e.createdAt, 'dd MMM yyyy') : '--'}">--</td>
+
+                            <!-- Actions column (View, Edit, Deactivate/Activate) -->
                             <td>
-                                <!-- Employee actions: state-changing actions are POST forms inside the modals below -->
                                 <div class="fa-row-actions">
+                                    <!-- View button -->
                                     <a class="fa-btn fa-btn-outline fa-btn-sm"
                                        th:href="@{/admin/employees/{employeeId}(employeeId=${e.employeeId})}"
                                        th:aria-label="'View ' + ${e.fullName}">
                                         <i class="bi bi-eye" aria-hidden="true"></i> View
                                     </a>
+
+                                    <!-- Edit button -->
                                     <a class="fa-btn fa-btn-outline fa-btn-sm"
                                        th:href="@{/admin/employees/{employeeId}/edit(employeeId=${e.employeeId})}"
                                        th:aria-label="'Edit ' + ${e.fullName}">
                                         <i class="bi bi-pencil-square" aria-hidden="true"></i> Edit
                                     </a>
+
+                                    <!-- Deactivate button (shown if employee is active) -->
                                     <button type="button" class="fa-btn fa-btn-outline-danger fa-btn-sm"
                                             th:if="${isActive}"
                                             data-bs-toggle="modal"
@@ -314,7 +429,8 @@
                                             th:aria-label="'Deactivate ' + ${e.fullName}">
                                         <i class="bi bi-person-dash" aria-hidden="true"></i> Deactivate
                                     </button>
-                                    <!-- Activate Employee action -->
+
+                                    <!-- Activate button (shown if employee is inactive) -->
                                     <button type="button" class="fa-btn fa-btn-outline fa-btn-sm"
                                             th:unless="${isActive}"
                                             data-bs-toggle="modal"
@@ -325,10 +441,17 @@
                                 </div>
                             </td>
                         </tr>
+
+                        <!-- Empty state row: displayed when the employee list is null or empty -->
                         <tr th:if="${employees == null or employees.isEmpty()}">
-                            <td colspan="7" class="text-center text-secondary py-4">
-                                <span th:if="${hasFilter}">No employees found matching your search criteria.</span>
-                                <span th:unless="${hasFilter}">No employees found.</span>
+                            <!--
+                              3. Updated colspan to 7 because of the SL column.
+                              This spans the empty state message across all table columns.
+                            -->
+                            <td colspan="7" class="text-center py-5">
+                                <div class="mb-2"><i class="bi bi-folder2-open fs-1 text-muted"></i></div>
+                                <span class="fw-semibold text-secondary" th:if="${hasFilter}">No employees found matching your search criteria.</span>
+                                <span class="fw-semibold text-secondary" th:unless="${hasFilter}">No employees found in the directory.</span>
                                 <div class="mt-3" th:if="${hasFilter}">
                                     <a th:href="@{/admin/employees}" class="fa-btn fa-btn-outline fa-btn-sm">Clear Filters</a>
                                 </div>
@@ -339,21 +462,21 @@
                 </div>
 
                 <!-- Pagination-ready footer: shown only when the controller supplies totalPages > 1.
-                     Spring Data Page numbers are zero-based. keyword and status are kept in every page link. -->
+                     Spring Data Page numbers are zero-based. keyword, status, and designation are kept in every page link. -->
                 <div class="fa-table-footer" th:if="${totalPages != null and totalPages > 1}">
                     <span>Page <strong th:text="${currentPage + 1}">1</strong> of <strong th:text="${totalPages}">1</strong></span>
 
                     <nav aria-label="Employee pagination">
                         <ul class="pagination pagination-sm fa-pagination">
                             <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
-                                <a class="page-link" th:href="@{/admin/employees(page=${currentPage - 1}, keyword=${kw}, status=${st})}">Previous</a>
+                                <a class="page-link" th:href="@{/admin/employees(page=${currentPage - 1}, keyword=${kw}, status=${st}, employeeDesignation=${desig})}">Previous</a>
                             </li>
                             <li class="page-item" th:each="p : ${#numbers.sequence(0, totalPages - 1)}"
                                 th:classappend="${p == currentPage} ? 'active'">
-                                <a class="page-link" th:href="@{/admin/employees(page=${p}, keyword=${kw}, status=${st})}" th:text="${p + 1}">1</a>
+                                <a class="page-link" th:href="@{/admin/employees(page=${p}, keyword=${kw}, status=${st}, employeeDesignation=${desig})}" th:text="${p + 1}">1</a>
                             </li>
                             <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
-                                <a class="page-link" th:href="@{/admin/employees(page=${currentPage + 1}, keyword=${kw}, status=${st})}">Next</a>
+                                <a class="page-link" th:href="@{/admin/employees(page=${currentPage + 1}, keyword=${kw}, status=${st}, employeeDesignation=${desig})}">Next</a>
                             </li>
                         </ul>
                     </nav>
@@ -368,13 +491,15 @@
                 <div class="modal fade" th:if="${isActive}" th:id="'deactivateModal-' + ${e.id}" tabindex="-1"
                      th:aria-labelledby="'deactivateTitle-' + ${e.id}" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
+                        <div class="modal-content border-0 shadow-lg">
                             <form method="post" th:action="@{/admin/employees/{employeeId}/deactivate(employeeId=${e.employeeId})}">
-                                <div class="modal-header">
-                                    <h2 class="modal-title" th:id="'deactivateTitle-' + ${e.id}">Deactivate Employee</h2>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <div class="modal-header bg-danger text-white">
+                                    <h2 class="modal-title fs-5" th:id="'deactivateTitle-' + ${e.id}">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Deactivate Employee
+                                    </h2>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                                <div class="modal-body">
+                                <div class="modal-body p-4">
                                     <!-- Employee identity -->
                                     <dl class="fa-modal-employee row g-1 mb-3">
                                         <dt class="col-5 fw-normal text-secondary">Employee ID</dt>
@@ -382,15 +507,15 @@
                                         <dt class="col-5 fw-normal text-secondary">Employee</dt>
                                         <dd class="col-7 fw-semibold mb-0" th:text="${e.fullName}">Full Name</dd>
                                         <dt class="col-5 fw-normal text-secondary">Current Status</dt>
-                                        <dd class="col-7 mb-0"><span class="fa-status fa-status-success" th:text="${e.employeeStatus}">ACTIVE</span></dd>
+                                        <dd class="col-7 mb-0"><span class="fa-emp-status-dot active" th:text="${e.employeeStatus}">ACTIVE</span></dd>
                                     </dl>
-                                    <p>This employee will be marked <strong>INACTIVE</strong> in FundAxis.</p>
+                                    <p class="text-secondary small mb-3">This employee will be marked <strong>INACTIVE</strong> in FundAxis.</p>
                                     <label th:for="'reasonOfDeactivation-' + ${e.id}" class="fa-label">Reason for Deactivation <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden">(required)</span></label>
                                     <textarea class="form-control fa-input" name="reasonOfDeactivation" rows="3" required
                                               placeholder="Enter the reason for deactivating this employee"
                                               th:id="'reasonOfDeactivation-' + ${e.id}"></textarea>
                                 </div>
-                                <div class="modal-footer">
+                                <div class="modal-footer bg-light">
                                     <button type="button" class="fa-btn fa-btn-outline" data-bs-dismiss="modal">Cancel</button>
                                     <button type="submit" class="fa-btn fa-btn-danger">Deactivate Employee</button>
                                 </div>
@@ -403,14 +528,16 @@
                 <div class="modal fade" th:unless="${isActive}" th:id="'activateModal-' + ${e.id}" tabindex="-1"
                      th:aria-labelledby="'activateTitle-' + ${e.id}" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
+                        <div class="modal-content border-0 shadow-lg">
                             <!-- FundAxis POST activation form: uses the official bank Employee ID; no reason is required -->
                             <form method="post" th:action="@{/admin/employees/{employeeId}/activate(employeeId=${e.employeeId})}">
-                                <div class="modal-header">
-                                    <h2 class="modal-title" th:id="'activateTitle-' + ${e.id}">Activate Employee</h2>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <div class="modal-header bg-success text-white">
+                                    <h2 class="modal-title fs-5" th:id="'activateTitle-' + ${e.id}">
+                                        <i class="bi bi-person-check-fill me-2"></i>Activate Employee
+                                    </h2>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                                <div class="modal-body">
+                                <div class="modal-body p-4">
                                     <!-- Employee identity -->
                                     <dl class="fa-modal-employee row g-1 mb-3">
                                         <dt class="col-5 fw-normal text-secondary">Employee ID</dt>
@@ -418,11 +545,11 @@
                                         <dt class="col-5 fw-normal text-secondary">Employee</dt>
                                         <dd class="col-7 fw-semibold mb-0" th:text="${e.fullName}">Full Name</dd>
                                         <dt class="col-5 fw-normal text-secondary">Current Status</dt>
-                                        <dd class="col-7 mb-0"><span class="fa-status fa-status-neutral" th:text="${e.employeeStatus}">INACTIVE</span></dd>
+                                        <dd class="col-7 mb-0"><span class="fa-emp-status-dot inactive" th:text="${e.employeeStatus}">INACTIVE</span></dd>
                                     </dl>
-                                    <p class="mb-0">This employee will be restored to <strong>ACTIVE</strong> status in FundAxis.</p>
+                                    <p class="mb-0 text-secondary">This employee will be restored to <strong>ACTIVE</strong> status in FundAxis.</p>
                                 </div>
-                                <div class="modal-footer">
+                                <div class="modal-footer bg-light">
                                     <button type="button" class="fa-btn fa-btn-outline" data-bs-dismiss="modal">Cancel</button>
                                     <button type="submit" class="fa-btn fa-btn-primary">Activate Employee</button>
                                 </div>

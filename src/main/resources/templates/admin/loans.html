@@ -13,6 +13,7 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
@@ -25,7 +26,7 @@
     <!-- Shared FundAxis dashboard styles + the button / modal / table-footer / pagination styles from the Employee Management page -->
     <link th:href="@{/css/dashboard.css}" rel="stylesheet">
     <link th:href="@{/css/admin-employees.css}" rel="stylesheet">
-    <link th:href="@{/css/admin-loans.css}" rel="stylesheet">
+    <link th:href="@{/css/loans.css}" rel="stylesheet">
 </head>
 <body class="fa-body">
 
@@ -37,7 +38,7 @@
     <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
         <div class="fa-sidebar-brand">
             <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">
-                <img th:src="@{/images/fundaxis-logo.png}" alt="FundAxis" class="fa-brand-logo">
+                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
                 <span class="fa-brand-text">FundAxis</span>
             </a>
             <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">
@@ -55,7 +56,8 @@
             <p class="fa-nav-heading">Administration</p>
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>
-                <li><a th:href="@{/admin/contributions}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
                 <!-- Loans is the active item on this page -->
                 <li><a th:href="@{/admin/loans}" class="fa-nav-link active" aria-current="page"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>
                 <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>
@@ -313,6 +315,12 @@
             <section class="fa-card" aria-labelledby="faLoansTitle">
                 <div class="fa-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <h2 class="fa-card-title" id="faLoansTitle">Loan Records</h2>
+
+                    <a class="fa-btn fa-btn-outline fa-btn-sm"
+                       th:href="@{/admin/loans/export/excel(keyword=${kw},loanStatus=${st},eligibilityStatus=${el},loanType=${ltype})}"
+                       aria-label="Export filtered loan reports to Excel">
+                        <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Export Excel
+                    </a>
 
                     <!-- Result summary feedback announcement -->
                     <p class="mb-0 text-secondary small" id="loanResultSummary" role="status" aria-live="polite">

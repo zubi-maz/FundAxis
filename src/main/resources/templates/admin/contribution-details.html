@@ -10,6 +10,7 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
@@ -33,7 +34,7 @@
     <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
         <div class="fa-sidebar-brand">
             <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">
-                <img th:src="@{/images/fundaxis-logo.png}" alt="FundAxis" class="fa-brand-logo">
+                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
                 <span class="fa-brand-text">FundAxis</span>
             </a>
             <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">
@@ -52,7 +53,8 @@
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>
                 <!-- Contributions stays the active item on this page -->
-                <li><a th:href="@{/admin/contributions}" class="fa-nav-link active" aria-current="page"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link active" aria-current="page"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
                 <li><a th:href="@{/admin/loans}" class="fa-nav-link"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>
                 <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>
                 <li><a th:href="@{/admin/disbursements}" class="fa-nav-link"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Loan Disbursements</span></a></li>
@@ -155,7 +157,7 @@
                     <nav aria-label="Breadcrumb">
                         <ol class="breadcrumb fa-breadcrumb">
                             <li class="breadcrumb-item"><a th:href="@{/admin/dashboard}">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a th:href="@{/admin/contributions}">Contribution Management</a></li>
+                            <li class="breadcrumb-item"><a th:href="@{/admin/contribution-workspace}">Contribution Management</a></li>
                             <li class="breadcrumb-item active" aria-current="page">Contribution Details</li>
                         </ol>
                     </nav>
@@ -164,7 +166,7 @@
                 <!-- Actions: Back is always shown; Edit / Mark Paid / Cancel only for PENDING.
                      Mark Paid and Cancel are POST forms inside the confirmation modals below. -->
                 <div class="d-flex flex-wrap gap-2">
-                    <a th:href="@{/admin/contributions}" class="fa-btn fa-btn-outline">
+                    <a th:href="@{/admin/contribution-workspace}" class="fa-btn fa-btn-outline">
                         <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Contributions
                     </a>
                     <a th:href="@{/admin/contributions/{id}/edit(id=${contribution.id})}" class="fa-btn fa-btn-outline" th:if="${isPending}">
@@ -290,14 +292,7 @@
                                 <dt class="col-sm-5 fw-normal text-secondary">Full Name</dt>
                                 <dd class="col-sm-7 mb-0 fw-semibold" th:text="${contribution.employee.fullName != null ? contribution.employee.fullName : '--'}">Full Name</dd>
                             </div>
-                            <div class="row py-3 border-bottom">
-                                <dt class="col-sm-5 fw-normal text-secondary">Email</dt>
-                                <dd class="col-sm-7 mb-0 fw-semibold text-break" th:text="${contribution.employee.email != null ? contribution.employee.email : '--'}">--</dd>
-                            </div>
-                            <div class="row py-3">
-                                <dt class="col-sm-5 fw-normal text-secondary">Phone Number</dt>
-                                <dd class="col-sm-7 mb-0 fw-semibold" th:text="${contribution.employee.phoneNumber != null ? contribution.employee.phoneNumber : '--'}">--</dd>
-                            </div>
+
                         </dl>
                         <p class="text-secondary p-3 p-md-4 mb-0" th:if="${contribution.employee == null}">
                             Employee information is not available for this record.

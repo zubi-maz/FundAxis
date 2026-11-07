@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -170,9 +171,9 @@ public class LoanDisbursementController {
     ///---------- Complete A Processing Disbursement ----------
     @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<LoanDisbursement> completeDisbursement(@PathVariable Long id, @Valid @RequestBody LoanDisbursementCompleteRequest request) {
+    public ResponseEntity<LoanDisbursement> completeDisbursement(@PathVariable Long id, @Valid @RequestBody LoanDisbursementCompleteRequest request, Authentication authentication) {
 
-        LoanDisbursement disbursement = loanDisbursementService.completeDisbursement(id, request.getProcessedBy(), request.getReferenceNumber());
+        LoanDisbursement disbursement = loanDisbursementService.completeDisbursement(id, authentication.getName(), request.getReferenceNumber());
 
         return ResponseEntity.ok(disbursement);
 

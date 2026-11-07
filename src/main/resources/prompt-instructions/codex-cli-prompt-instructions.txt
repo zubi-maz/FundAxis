@@ -1,0 +1,367 @@
+# FUNDAXIS — CRITICAL ERROR RESOLUTION
+## Fix SQL Server Schema Mismatch and Restore Loan Management
+
+Act as a Senior Java Spring Boot Engineer, Microsoft SQL Server Database Engineer, Hibernate/JPA Specialist, and Banking Application Debugging Expert.
+
+**Project:** FundAxis — National Bank PLC Employee Fund Management System
+
+**Project Directory:**
+`C:\Users\This\Downloads\nbl-all-projects`
+
+**Technology:**
+Java 21 target, Spring Boot 4.1.1, Spring Data JPA, Hibernate 7, Microsoft SQL Server, Thymeleaf, Maven.
+
+## 1. THE ACTUAL ERROR
+
+The application starts successfully and connects to SQL Server.
+
+However, accessing Loan Management triggers:
+
+```text
+SQLServerException: Invalid column name 'approved_at'.
+ErrorCode: 207
+SQLState: S0001
+
+org.springframework.dao.InvalidDataAccessResourceUsageException:
+JDBC exception executing SQL
+```
+
+The failing Hibernate query selects fields from the `Loan` entity, including:
+
+```sql
+l1_0.approved_at,
+l1_0.approved_by,
+l1_0.approved_tenure_months,
+l1_0.created_by,
+l1_0.guarantor_employee_id,
+l1_0.legacy_guarantor_name
+```
+
+The first confirmed missing column is:
+
+`approved_at`
+
+The remaining columns must also be verified against the actual database.
+
+**Important:** Do not assume that only one column is missing.
+
+## 2. PRIMARY OBJECTIVE
+
+Identify and safely resolve the database schema mismatch introduced or exposed during FundAxis Loan Management development Phases 0–4.
+
+Restore normal Loan Management operation without losing or modifying existing financial records.
+
+This is a debugging and corrective implementation task.
+
+Do not rebuild the Loan Management module.
+
+Do not create new unnecessary entities, services, pages, tabs, or tables.
+
+## 3. INVESTIGATE THE ROOT CAUSE
+
+Inspect:
+
+```text
+src/main/java/com/fundaxis/entity/Loan.java
+src/main/java/com/fundaxis/entity/LoanDisbursement.java
+src/main/java/com/fundaxis/entity/LoanExtension.java
+src/main/java/com/fundaxis/entity/RepaymentSchedule.java
+src/main/java/com/fundaxis/entity/Repayment.java
+src/main/java/com/fundaxis/entity/LoanRepayment.java
+```
+
+Also inspect:
+
+```text
+src/main/resources/application.properties
+src/main/resources/db/
+```
+
+Review all SQL Server migration scripts created during Phases 0–4.
+
+Determine:
+
+1. Which entity fields were recently added?
+2. Which database columns are required?
+3. Which columns already exist?
+4. Which migration scripts have already been applied?
+5. Which migrations are still pending?
+6. Whether column names and SQL types match JPA annotations.
+7. Whether foreign keys and constraints are compatible with existing data.
+
+Inspect the actual Git diff and project history where available.
+
+Do not delete newly implemented business fields merely to suppress SQL errors.
+
+## 4. VERIFY THE ACTUAL SQL SERVER SCHEMA
+
+The runtime log identifies a SQL Server connection to:
+
+```text
+Server: localhost:1433
+Database: fundaxis
+Schema: dbo
+```
+
+Confirm these details against the effective application configuration before inspecting or preparing changes.
+
+If an authorized database connection is available, use read-only schema queries.
+
+For example:
+
+```sql
+SELECT
+    COLUMN_NAME,
+    DATA_TYPE,
+    CHARACTER_MAXIMUM_LENGTH,
+    NUMERIC_PRECISION,
+    NUMERIC_SCALE,
+    IS_NULLABLE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'dbo'
+  AND TABLE_NAME = 'loans'
+ORDER BY ORDINAL_POSITION;
+```
+
+Also examine the other existing Loan-related tables.
+
+Compare the actual schema against the current JPA entity mappings.
+
+**Do not guess the SQL Server column definitions.**
+
+## 5. PREPARE THE CORRECT DATABASE MIGRATION
+
+If columns are genuinely missing, prepare a minimal, safe, additive SQL Server migration.
+
+Requirements:
+
+- Preserve all existing loans.
+- Preserve repayment records.
+- Preserve disbursement records.
+- Preserve historical approval information.
+- Use correct SQL Server data types.
+- Handle existing rows safely.
+- Avoid invalid NOT NULL constraints on legacy records.
+- Preserve existing foreign keys.
+- Prevent duplicate constraints.
+- Make the migration rerunnable where practical.
+- Include preflight and post-migration verification queries.
+
+For each column, determine the intended source and meaning.
+
+Check especially:
+
+```text
+approved_at
+approved_by
+approved_tenure_months
+created_by
+guarantor_employee_id
+legacy_guarantor_name
+```
+
+Verify whether these are all new columns, whether existing equivalents can be reused, and whether they are mapped to the correct table.
+
+For guarantor relationships, check the actual Employee table and applicable foreign-key requirements.
+
+Do not automatically associate historical guarantor names with employee records.
+
+### Important
+
+Keep:
+
+```properties
+spring.jpa.hibernate.ddl-auto=none
+```
+
+Do not change it to:
+
+```properties
+spring.jpa.hibernate.ddl-auto=update
+```
+
+Do not rely on Hibernate auto-update to repair the schema.
+
+Do not execute consequential schema migrations without explicit authorization.
+
+Instead, generate the exact required SQL script, verify it against the available schema metadata, and clearly report how to apply it safely.
+
+## 6. CHECK ALL PHASE 0–4 SCHEMA CHANGES
+
+Do not fix only `approved_at`.
+
+Inspect all recent Loan Management changes involving:
+
+- Loan approval audit.
+- Guarantor information.
+- Loan disbursement.
+- Repayment allocation.
+- Installment management.
+- Late-fee records.
+- Repayment reversal.
+- Financial reconciliation.
+- Loan closure.
+- Reporting dependencies.
+
+Identify any other missing database columns, foreign keys, indexes, or tables.
+
+Avoid repeated application failures where each restart reveals another missing column.
+
+Prepare a consolidated, correctly ordered migration plan for confirmed pending schema changes.
+
+Do not duplicate existing migration scripts.
+
+## 7. PRESERVE THE CURRENT DATA
+
+This is a banking financial application.
+
+Absolutely DO NOT:
+
+- Drop tables.
+- Truncate tables.
+- Delete loan records.
+- Reset identities.
+- Recreate the entire database.
+- Rewrite existing financial transactions.
+- Modify historical repayment amounts.
+- Remove guarantor information.
+- Disable foreign-key constraints to hide defects.
+- Disable Spring Security.
+- Make unrelated changes to Employee, Contribution, or Share Management.
+
+Use additive, non-destructive schema corrections.
+
+If existing data is incompatible with a proposed constraint, report the conflict and prepare a safe remediation plan.
+
+## 8. VERIFY LOAN MANAGEMENT AFTER THE FIX
+
+After preparing the corrected migration and applying it only if separately authorized:
+
+Verify these existing operations:
+
+1. Loan Register loads successfully.
+2. Loan Details opens successfully.
+3. Loan Creation works.
+4. Loan Approval works.
+5. Guarantor details load correctly.
+6. Loan Disbursement works.
+7. Loan Extension works.
+8. Repayment Schedule loads.
+9. Repayment History loads.
+10. Loan Financial Summary loads.
+11. Loan Excel Export works.
+12. Reconciliation information loads.
+
+Do not create real financial transactions simply to test functionality.
+
+Use isolated test fixtures and a safe test database.
+
+If migration execution is not authorized, report database-dependent checks as blocked rather than claiming success.
+
+## 9. JAVA VERSION VERIFICATION
+
+The error log shows the application running with:
+
+```text
+Java 26.0.2
+```
+
+The project is intended to target Java 21.
+
+Check:
+
+- `pom.xml`
+- Maven compiler settings.
+- IntelliJ Project SDK.
+- IntelliJ Run Configuration JRE.
+- `JAVA_HOME`.
+
+Determine whether the current runtime is compatible with the intended Java 21 target.
+
+Do not incorrectly identify the Java version difference as the cause of the SQL Server `approved_at` error.
+
+Do not downgrade dependencies or change the runtime unnecessarily.
+
+## 10. BUILD AND TESTING
+
+Run appropriate available checks:
+
+```powershell
+mvn -DskipTests compile
+```
+
+```powershell
+mvn test
+```
+
+If Maven Wrapper exists, use the project's wrapper instead.
+
+Verify:
+
+- Java compilation.
+- JPA mapping consistency where testable.
+- Loan entity compatibility.
+- Migration script validity.
+- No broken repository queries.
+- No regressions in existing loan functionality.
+
+A successful Maven build does not prove that the live SQL Server schema is compatible.
+
+Report this distinction.
+
+## 11. FINAL REPORT
+
+After completing the work, report:
+
+### A. Root Cause
+Explain precisely why `approved_at` failed.
+
+### B. Missing Columns
+Provide the exact list of confirmed missing columns and their tables.
+
+### C. Migration
+Provide the SQL migration filename and location.
+
+### D. Database Changes
+Explain whether migrations were prepared, verified, or actually executed.
+
+### E. Source Code
+List any source files modified and why.
+
+### F. Verification
+Report actual build/test commands and results.
+
+### G. Remaining Blockers
+Clearly identify anything requiring database access or manual authorization.
+
+### H. Final Status
+Classify:
+
+- FIXED AND VERIFIED
+- FIX PREPARED — MIGRATION REQUIRED
+- PARTIALLY FIXED
+- BLOCKED
+
+Do not claim the runtime issue is fixed until the application successfully executes the previously failing Loan query against the corrected target schema.
+
+## FINAL DIRECTIVE
+
+Start investigating the actual FundAxis codebase now.
+
+Find the root cause of the missing `approved_at` column.
+
+Audit all pending Phase 0–4 schema changes.
+
+Prepare the smallest correct SQL Server migration.
+
+Preserve all existing data.
+
+Fix any confirmed source-code mapping mistakes.
+
+Run meaningful build and regression checks.
+
+Do not modify unrelated modules.
+
+Do not create unnecessary tabs, pages, or services.
+
+**The goal is to restore FundAxis Loan Management safely without compromising financial data integrity.**

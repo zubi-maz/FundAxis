@@ -1,4 +1,4 @@
-/* ===== FundAxis Repayment Schedule module styles (reuses dashboard.css and admin-employees.css) ===== */
+﻿/* ===== FundAxis Repayment Schedule module styles (reuses dashboard.css and admin-employees.css) ===== */
 
 /* Colour tokens used only by this module */
 :root { --rs-brand: #024731; --rs-brand-soft: #e6f1ed; --rs-border: #dbe5e1; --rs-muted: #5b6b66; --rs-text: #1f2d29; --rs-warning-bg: #fff7e0; --rs-warning-border: #f0d78a; --rs-danger-bg: #fdecec; --rs-danger-border: #f2b8b5; } /* Brand, neutrals, warning and danger tones */
@@ -24,7 +24,7 @@
 .rs-action-bar { display: flex; flex-wrap: wrap; gap: .75rem; padding: 1.25rem; } /* Buttons wrap on small screens */
 .rs-action-note { padding: 0 1.25rem 1.25rem; margin: 0; color: var(--rs-muted); font-size: .875rem; } /* Hint under the buttons */
 .rs-terminal-note { padding: 1.25rem; margin: 0; color: var(--rs-muted); } /* Message when no action is available */
-.fa-btn-danger-outline { border: 1px solid #b42318; color: #b42318; background: #fff; } /* Destructive outline button */
+.fa-btn-danger-outline { border: 1px solid #b42318; color: #b42318; background: var(--fa-card-background, #F0F4F1); } /* Destructive outline button */
 .fa-btn-danger-outline:hover { background: #b42318; color: #fff; } /* Fill on hover */
 .fa-btn-danger { border: 1px solid #b42318; color: #fff; background: #b42318; } /* Destructive solid button */
 .fa-btn-warning { border: 1px solid #b7791f; color: #4a3200; background: #f6c453; } /* Mark Overdue button */
@@ -34,7 +34,7 @@
 .rs-form-section.pt-0 { border-top: 0; } /* No divider for blocks attached to the one above */
 .rs-form-section-title { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--rs-brand); margin: 0 0 1rem; } /* Small section heading */
 .rs-form-help { font-size: .8rem; color: var(--rs-muted); margin-top: .35rem; } /* Small muted help text under a field */
-.rs-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; background: #f8fbfa; border-radius: 0 0 .75rem .75rem; } /* Right-aligned button bar */
+.rs-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; background: var(--fa-table-header, #E2EAE5); border-radius: 0 0 .75rem .75rem; } /* Right-aligned button bar */
 .rs-info-panel { display: flex; gap: .8rem; align-items: flex-start; border: 1px solid var(--rs-border); border-left: 4px solid var(--rs-brand); background: var(--rs-brand-soft); border-radius: .5rem; padding: 1rem 1.25rem; } /* Rules panel with an icon */
 .rs-info-panel > i { flex: 0 0 auto; font-size: 1.2rem; color: var(--rs-brand); } /* Panel icon */
 .rs-info-panel ul { margin: .4rem 0 0; padding-left: 1.2rem; } /* Tidy list spacing */
@@ -45,7 +45,7 @@
 .rs-modal-danger { background: var(--rs-danger-bg); border: 1px solid var(--rs-danger-border); color: #7d2727; } /* Danger tone for Cancel */
 .rs-modal-warning > i, .rs-modal-danger > i { flex: 0 0 auto; font-size: 1.2rem; line-height: 1.2; } /* Notice icon */
 .rs-modal-summary { display: grid; gap: 0; margin-top: 1rem; border: 1px solid var(--rs-border); border-radius: .75rem; overflow: hidden; } /* Boxed summary list */
-.rs-modal-summary > div { display: flex; justify-content: space-between; gap: 1rem; padding: .75rem .9rem; background: #fff; } /* One summary row */
+.rs-modal-summary > div { display: flex; justify-content: space-between; gap: 1rem; padding: .75rem .9rem; background: var(--fa-card-background, #F0F4F1); } /* One summary row */
 .rs-modal-summary > div + div { border-top: 1px solid var(--rs-border); } /* Line between rows */
 .rs-modal-summary span { color: var(--rs-muted); } /* Row label */
 .rs-modal-summary strong { color: var(--rs-text); text-align: right; } /* Row value */
@@ -56,7 +56,7 @@
 .rs-status-note { margin: .6rem 0 0; font-size: .85rem; font-weight: 400; color: var(--rs-muted); } /* Plain-language status explanation */
 
 /* ---------- Details page: due state pill ---------- */
-.rs-due-state { display: inline-block; padding: .2rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 700; border: 1px solid var(--rs-border); background: #fff; } /* Pill base */
+.rs-due-state { display: inline-block; padding: .2rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 700; border: 1px solid var(--rs-border); background: var(--fa-card-background, #F0F4F1); } /* Pill base */
 .rs-due-paid { background: #e3f4ea; color: #1b6b3a; border-color: #b5dcc3; } /* Paid */
 .rs-due-cancelled { background: #eef0ef; color: #55615d; border-color: #d3d8d6; } /* Cancelled */
 .rs-due-past { background: var(--rs-danger-bg); color: #9a1c14; border-color: var(--rs-danger-border); } /* Past due */
@@ -89,12 +89,12 @@
 
 /* ---------- Details page: loan plan totals and status counts ---------- */
 .rs-total-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; padding: 1.25rem; } /* Six boxes in two rows of three */
-.rs-total-box { border: 1px solid var(--rs-border); border-radius: .75rem; padding: .9rem 1rem; background: #fff; } /* Plain total box */
+.rs-total-box { border: 1px solid var(--rs-border); border-radius: .75rem; padding: .9rem 1rem; background: var(--fa-card-background, #F0F4F1); } /* Plain total box */
 .rs-total-box-key { border-color: var(--rs-brand); background: var(--rs-brand-soft); } /* Highlight the scheduled total */
 .rs-total-label { display: block; font-size: .8rem; color: var(--rs-muted); } /* Box caption */
 .rs-total-value { display: block; font-size: 1.2rem; font-weight: 700; color: var(--rs-brand); font-variant-numeric: tabular-nums; } /* Box figure */
 .rs-count-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; padding: 1.25rem; } /* Five status count boxes */
-.rs-count-box { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; border: 1px solid var(--rs-border); border-radius: .75rem; padding: .8rem 1rem; background: #fff; } /* Badge above a number */
+.rs-count-box { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; border: 1px solid var(--rs-border); border-radius: .75rem; padding: .8rem 1rem; background: var(--fa-card-background, #F0F4F1); } /* Badge above a number */
 .rs-count-box strong { font-size: 1.4rem; line-height: 1; color: var(--rs-text); } /* The count */
 
 /* ---------- Details page: installment table with the current row highlighted ---------- */

@@ -3,17 +3,18 @@
       EDIT : GET /admin/loans/{loanApplicationId}/edit -> POST /admin/loans/{loanApplicationId}/update   (editMode = true, DRAFT loans only)
       Expected model attributes:
         editMode        Boolean (true only for Edit)
-        loan            Loan (form-backing object: loanApplicationId, requestedAmount, interestRate, tenureMonths, applicationDate)
+        loan            Loan (application terms and remarks; approval terms are collected only during review)
         employeeId      (optional) official Employee ID to restore after a failed save; otherwise the posted request parameter is used
         errorMessage    (optional) business error: employee not found, duplicate Loan Application ID, rule violations
       Edit mode: loan.employee is used to show the read-only Employee ID; the controller must re-attach loanApplicationId and employee after a failed update
-      (they are not posted). Add: loanService.createLoan(employeeId, loan) -> redirect:/admin/loans, "Loan created successfully."; Edit -> redirect:/admin/loans/{loanApplicationId}, "Loan updated successfully.". Loan Status, Approval Date, Created At and Updated At are never posted. --->
+      (they are not posted). Guarantor identity is submitted separately by business Employee ID or legacy name and resolved server-side. Loan Status, approval audit and creation audit are never posted. --->
 
 <!DOCTYPE html>
 <html lang="en"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
@@ -26,7 +27,7 @@
     <!-- Shared FundAxis dashboard styles + the button / modal / table-footer / pagination styles from the Employee Management page -->
     <link th:href="@{/css/dashboard.css}" rel="stylesheet">
     <link th:href="@{/css/admin-employees.css}" rel="stylesheet">
-    <link th:href="@{/css/admin-loans.css}" rel="stylesheet">
+    <link th:href="@{/css/loans.css}" rel="stylesheet">
 </head>
 <body class="fa-body">
 
@@ -38,7 +39,7 @@
     <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
         <div class="fa-sidebar-brand">
             <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">
-                <img th:src="@{/images/fundaxis-logo.png}" alt="FundAxis" class="fa-brand-logo">
+                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
                 <span class="fa-brand-text">FundAxis</span>
             </a>
             <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">
@@ -56,7 +57,8 @@
             <p class="fa-nav-heading">Administration</p>
             <ul class="fa-nav-list">
                 <li><a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>
-                <li><a th:href="@{/admin/contributions}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
                 <!-- Loans is the active item on this page -->
                 <li><a th:href="@{/admin/loans}" class="fa-nav-link active" aria-current="page"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>
                 <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>
@@ -238,6 +240,29 @@
                                     </div>
                                 </fieldset>
 
+                                <!-- Optional guarantor: internal Employee ID is resolved server-side; legacy names are retained verbatim. -->
+                                <fieldset class="mb-4">
+                                    <legend class="h6 text-uppercase text-secondary mb-3">Guarantor <span class="text-lowercase fw-normal">(optional)</span></legend>
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label for="guarantorEmployeeId" class="fa-label">Guarantor Employee ID</label>
+                                            <input id="guarantorEmployeeId" name="guarantorEmployeeId" class="form-control fa-input"
+                                                   maxlength="50" autocomplete="off" spellcheck="false"
+                                                   th:value="${guarantorEmployeeId != null ? guarantorEmployeeId : ''}"
+                                                   placeholder="Internal employee ID, if verified">
+                                            <div class="form-text">Enter an existing business Employee ID. The system verifies the employee server-side.</div>
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="legacyGuarantorName" class="fa-label">Historical / External Guarantor Name</label>
+                                            <input id="legacyGuarantorName" name="legacyGuarantorName" class="form-control fa-input"
+                                                   maxlength="200" autocomplete="off"
+                                                   th:value="${legacyGuarantorName != null ? legacyGuarantorName : ''}"
+                                                   placeholder="Name as recorded in source documents">
+                                            <div class="form-text">Use only when no verified internal employee identity is available. Do not enter both fields.</div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+
                                 <!-- ================== LOAN IDENTIFICATION ================== -->
                                 <fieldset class="mb-4">
                                     <legend class="h6 text-uppercase text-secondary mb-3">Loan Identification</legend>
@@ -317,19 +342,6 @@
                                                  th:if="${#fields.hasErrors('requestedAmount')}" th:errors="*{requestedAmount}">Principal Amount error.</div>
                                         </div>
                                         <div class="col-12 col-md-6">
-                                            <label for="interestRate" class="fa-label">Interest Rate (%)
-                                                <span class="text-danger" aria-hidden="true">*</span>
-                                                <span class="visually-hidden">(required)</span>
-                                            </label>
-                                            <input id="interestRate" class="form-control fa-input" th:field="*{interestRate}"
-                                                   type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00" required
-                                                   th:classappend="${#fields.hasErrors('interestRate')} ? 'is-invalid'"
-                                                   aria-describedby="interestRateHelp interestRateError">
-                                            <div class="form-text" id="interestRateHelp">Annual rate as a percentage, minimum 0.</div>
-                                            <div class="invalid-feedback" id="interestRateError"
-                                                 th:if="${#fields.hasErrors('interestRate')}" th:errors="*{interestRate}">Interest Rate (%) error.</div>
-                                        </div>
-                                        <div class="col-12 col-md-6">
                                             <label for="tenureMonths" class="fa-label">Tenure (Months)
                                                 <span class="text-danger" aria-hidden="true">*</span>
                                                 <span class="visually-hidden">(required)</span>
@@ -394,6 +406,14 @@
                                                  th:if="${#fields.hasErrors('applicationDate')}" th:errors="*{applicationDate}">Application Date error.</div>
                                         </div>
 
+                                        <div class="col-12">
+                                            <label for="remarks" class="fa-label">Remarks</label>
+                                            <textarea id="remarks" class="form-control fa-input" th:field="*{remarks}"
+                                                      rows="3" maxlength="1000"
+                                                      placeholder="Optional administrative notes"></textarea>
+                                            <div class="form-text">Optional. Interest rate and other approved terms are recorded during review.</div>
+                                        </div>
+
                                         <!-- Eligibility Status comment block stays here unchanged -->
                                     </div>
                                 </fieldset>
@@ -405,8 +425,8 @@
                                 </div>
                                 <div class="fa-modal-employee mt-4 mb-0" th:unless="${isEdit}">
                                     <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-                                    New loans are created according to FundAxis loan business rules. The initial
-                                    loan status is set by the system and cannot be chosen here.
+                                    Guarantor information is optional; new loans remain DRAFT until explicitly submitted.
+                                    Interest and guarantor policy decisions must be reviewed under the existing bank process.
                                 </div>
                             </div>
 

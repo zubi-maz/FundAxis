@@ -4,6 +4,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 
 ///----- Not Found -> 404 NOT FOUND -----///
@@ -231,11 +236,76 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateRepaymentException.class)
     public ResponseEntity<String> handleDuplicateRepaymentException(
-            DuplicateRepaymentException exception
-    ) {
+            DuplicateRepaymentException exception) {
 
         return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
+                .status(HttpStatus.CONFLICT)
                 .body(exception.getMessage());
     }
+
+
+
+    // Handle Spring validation errors from @Valid @RequestBody.
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<String> handleValidationException(
+            MethodArgumentNotValidException exception) {
+
+        String message = exception.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> error.getField() + ": "
+                        + (error.getDefaultMessage() == null
+                        ? "Invalid value"
+                        : error.getDefaultMessage()))
+                .distinct()
+                .findFirst()
+                .orElse("Invalid request data");
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(message);
+    }
+
+    // Handle Spring's built-in exceptions with an explicit HTTP status.
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<String> handleResponseStatusException(
+            ResponseStatusException exception) {
+
+        String message = exception.getReason() != null
+                ? exception.getReason()
+                : "Request could not be processed";
+
+        return ResponseEntity
+                .status(exception.getStatusCode())
+                .body(message);
+    }
+
+
+
+    private static final Logger log =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    // Handle unexpected server errors without exposing internal details.
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleUnexpectedException(Exception exception) {
+
+        log.error("Unexpected server error occurred", exception);
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("An unexpected error occurred. Please contact support.");
+    }
+
+
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResourceFound(
+            NoResourceFoundException ex) {
+
+        return ResponseEntity
+                .notFound()
+                .build();
+    }
+
+
 }

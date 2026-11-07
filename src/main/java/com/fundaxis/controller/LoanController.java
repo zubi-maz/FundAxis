@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -32,9 +33,12 @@ public class LoanController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/employee/{employeeId}")
-    public ResponseEntity<Loan> createLoan(@PathVariable String employeeId, @Valid @RequestBody Loan loan) {
+    public ResponseEntity<Loan> createLoan(@PathVariable String employeeId,
+                                           @Valid @RequestBody Loan loan,
+                                           Authentication authentication) {
 
-        Loan createdLoan = loanService.createLoan(employeeId, loan);
+        Loan createdLoan = loanService.createLoan(employeeId, null, null, loan,
+                authentication.getName());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(createdLoan);
 
@@ -180,11 +184,14 @@ public class LoanController {
 
 
     ///---------- Approve An Eligible Loan ----------
-    @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/approve")
-    public ResponseEntity<Loan> approveLoan(@PathVariable Long id, @Valid @RequestBody LoanApprovalRequest request) {
+    public ResponseEntity<Loan> approveLoan(@PathVariable Long id,
+                                            @Valid @RequestBody LoanApprovalRequest request,
+                                            Authentication authentication) {
 
-        return ResponseEntity.ok(loanService.approveLoan(id, request.getApprovedAmount(), request.getInterestRate()));
+        return ResponseEntity.ok(loanService.approveLoan(id, request.getApprovedAmount(),
+                request.getInterestRate(), request.getApprovedTenureMonths(), authentication.getName()));
 
     }
 
@@ -192,9 +199,12 @@ public class LoanController {
     ///---------- Reject A Loan That Is Under Review ----------
     @PreAuthorize("hasAnyRole('ADMIN', 'IT_SUPPORT')")
     @PatchMapping("/{id}/reject")
-    public ResponseEntity<Loan> rejectLoan(@PathVariable Long id, @Valid @RequestBody LoanRejectionRequest request) {
+    public ResponseEntity<Loan> rejectLoan(@PathVariable Long id,
+                                           @Valid @RequestBody LoanRejectionRequest request,
+                                           Authentication authentication) {
 
-        return ResponseEntity.ok(loanService.rejectLoan(id, request.getRejectionReason()));
+        return ResponseEntity.ok(loanService.rejectLoan(id, request.getRejectionReason(),
+                authentication.getName()));
 
     }
 

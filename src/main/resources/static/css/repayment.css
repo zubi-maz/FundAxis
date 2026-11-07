@@ -1,8 +1,8 @@
-/* FundAxis — Admin Repayment Management */
+﻿/* FundAxis â€” Admin Repayment Management */
 :root {
     --rp-primary:#024731; --rp-primary-dark:#013626; --rp-primary-soft:#eaf4f0;
     --rp-primary-border:#c8ddd5; --rp-text:#1f2d28; --rp-muted:#66756f;
-    --rp-border:#dfe7e3; --rp-surface:#fff; --rp-surface-soft:#f7faf8;
+    --rp-border:var(--fa-border, #CCD9D1); --rp-surface:var(--fa-card-background, #F0F4F1); --rp-surface-soft:var(--fa-table-header, #E2EAE5);
     --rp-success:#157347; --rp-success-soft:#eaf7f0; --rp-danger:#b42318;
     --rp-danger-soft:#fff1f0; --rp-warning:#8a6100; --rp-warning-soft:#fff8e7;
     --rp-shadow:0 8px 24px rgba(20,50,39,.06);
@@ -23,7 +23,7 @@
 .rp-form-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:.75rem;margin-top:2rem;padding-top:1.25rem;border-top:1px solid var(--rp-border)}
 .rp-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0}.rp-detail-item{min-width:0;padding:1rem 1.15rem;border-bottom:1px solid var(--rp-border)}.rp-detail-item:nth-child(odd){border-right:1px solid var(--rp-border)}.rp-detail-wide{grid-column:1/-1;border-right:0!important}
 .rp-detail-label{margin:0 0 .35rem;color:var(--rp-muted);font-size:.77rem;font-weight:700;text-transform:uppercase;letter-spacing:.035em}.rp-detail-value{margin:0;color:var(--rp-text);font-weight:650;overflow-wrap:anywhere}
-.rp-amount-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;padding:1.1rem}.rp-amount-box{border:1px solid var(--rp-border);border-radius:.8rem;padding:1rem;background:#fff}.rp-amount-box-key{background:var(--rp-primary-soft);border-color:var(--rp-primary-border)}
+.rp-amount-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;padding:1.1rem}.rp-amount-box{border:1px solid var(--rp-border);border-radius:.8rem;padding:1rem;background:var(--fa-card-background,#F0F4F1)}.rp-amount-box-key{background:var(--rp-primary-soft);border-color:var(--rp-primary-border)}
 .rp-amount-label{display:block;margin-bottom:.35rem;color:var(--rp-muted);font-size:.8rem}.rp-amount-value{display:block;color:var(--rp-text);font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums}.rp-amount-box-key .rp-amount-value{color:var(--rp-primary)}
 .rp-history-current{background:#f1f8f5!important}.rp-history-current td:first-child{box-shadow:inset 4px 0 0 var(--rp-primary)}
 .rp-action-bar{display:flex;align-items:center;flex-wrap:wrap;gap:.75rem;padding:1.1rem}.rp-terminal-note{margin:0;padding:1.1rem;color:var(--rp-muted)}.rp-action-note{display:flex;gap:.6rem;align-items:flex-start;margin:0 1.1rem 1.1rem;padding:.85rem 1rem;border-radius:.75rem;background:var(--rp-surface-soft);color:#53625c;font-size:.87rem}
@@ -48,13 +48,13 @@
 .rp-form-section.rp-form-actions { margin-top: 0; padding: 1.25rem 1.5rem; background: var(--rp-surface-soft); } /* Button bar as the last section of the card */
 
 /* ---------- Buttons used by the reverse action ---------- */
-.fa-btn-danger-outline { border: 1px solid var(--rp-danger); color: var(--rp-danger); background: #fff; } /* Destructive outline button */
+.fa-btn-danger-outline { border: 1px solid var(--rp-danger); color: var(--rp-danger); background: var(--fa-card-background, #F0F4F1); } /* Destructive outline button */
 .fa-btn-danger-outline:hover { background: var(--rp-danger); color: #fff; } /* Fill on hover */
 .fa-btn-danger { border: 1px solid var(--rp-danger); color: #fff; background: var(--rp-danger); } /* Destructive solid button */
 
 /* ---------- Reverse modal summary ---------- */
 .rp-modal-summary { display: grid; margin-top: 1rem; border: 1px solid var(--rp-border); border-radius: .75rem; overflow: hidden; } /* Boxed summary list */
-.rp-modal-summary > div { display: flex; justify-content: space-between; gap: 1rem; padding: .7rem .9rem; background: #fff; } /* One summary row */
+.rp-modal-summary > div { display: flex; justify-content: space-between; gap: 1rem; padding: .7rem .9rem; background: var(--fa-card-background, #F0F4F1); } /* One summary row */
 .rp-modal-summary > div + div { border-top: 1px solid var(--rp-border); } /* Line between rows */
 .rp-modal-summary span { color: var(--rp-muted); } /* Row label */
 .rp-modal-summary strong { color: var(--rp-text); text-align: right; } /* Row value */

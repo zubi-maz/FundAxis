@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"><body>
+<section th:fragment="panel" class="cs-tab-panel cs-st-panel fa-stmt-page" aria-label="Contribution statements">
+
+  <!-- Branded Hero Banner -->
+  <div class="fa-stmt-hero">
+    <span class="cs-st-eyebrow">EMPLOYEE FUND REPORTING</span>
+    <h2>Contribution Statements</h2>
+    <p>Select an employee, choose a reporting period, then generate a reliable contribution statement.</p>
+  </div>
+
+  <p class="cs-st-error" role="alert" th:if="${reportError != null}" th:text="${reportError}"></p>
+
+  <form id="cs-st-generator" class="cs-st-generator-card" method="get" th:action="@{/admin/contribution-workspace}">
+    <input type="hidden" name="tab" value="statement">
+    <div class="cs-st-workflow">
+
+      <!-- Step 1: Select Employee -->
+      <fieldset class="cs-st-step">
+        <legend><span class="cs-st-step-number">1</span> Select Employee</legend>
+        <p>Look up the employee using their business ID.</p>
+        <label for="cs-st-employee-id">Business Employee ID</label>
+        <div class="cs-st-lookup-control">
+          <input id="cs-st-employee-id" class="cs-input cs-form-control" name="employeeId" required maxlength="50" autocomplete="off" th:value="${employeeId}" th:attr="data-lookup-url=@{/admin/employees/lookup}" placeholder="e.g. EMP18" aria-describedby="cs-st-lookup-status">
+          <button class="cs-btn cs-btn-outline" type="button" id="cs-st-find"><i class="bi bi-search" aria-hidden="true"></i> Find</button>
+        </div>
+        <p id="cs-st-lookup-status" role="status" aria-live="polite"></p>
+        <div class="cs-st-verified-employee" id="cs-st-verified" th:hidden="${statementReport == null}">
+          <div class="cs-st-verified-heading">
+            <i class="bi bi-person-check-fill" aria-hidden="true"></i>
+            <strong id="cs-st-employee-name" th:text="${statementReport != null ? statementReport.employee.fullName : ''}"></strong>
+          </div>
+          <dl>
+            <div><dt>Employee ID</dt><dd id="cs-st-verified-id" th:text="${statementReport != null ? statementReport.employee.employeeId : ''}"></dd></div>
+            <div><dt>Designation</dt><dd id="cs-st-verified-designation" th:text="${statementReport != null ? statementReport.employee.employeeDesignation : ''}"></dd></div>
+            <div><dt>Status</dt><dd id="cs-st-verified-status" th:classappend="${statementReport != null and statementReport.employee.employeeStatus.name() == 'ACTIVE'} ? ' is-active' : ' is-inactive'" th:text="${statementReport != null ? statementReport.employee.employeeStatus : ''}"></dd></div>
+            <div><dt>Fund joined</dt><dd id="cs-st-verified-joined" th:text="${statementReport != null ? (statementReport.employee.fundJoinDate ?: 'Not recorded') : ''}"></dd></div>
+            <div><dt>Fund exited</dt><dd id="cs-st-verified-exited" th:text="${statementReport != null ? (statementReport.employee.fundExitDate ?: 'Not recorded') : ''}"></dd></div>
+          </dl>
+        </div>
+      </fieldset>
+
+      <!-- Step 2: Select Period -->
+      <fieldset class="cs-st-step">
+        <legend><span class="cs-st-step-number">2</span> Select Reporting Period</legend>
+        <p>Use an annual period or a range of complete months.</p>
+        <label for="cs-st-type">Statement type</label>
+        <select class="cs-input cs-form-select" id="cs-st-type" name="statementType">
+          <option value="ANNUAL" th:selected="${statementType == 'ANNUAL'}">Annual Statement</option>
+          <option value="MONTHLY" th:selected="${statementType == 'MONTHLY'}">Monthly Statement</option>
+          <option value="CUSTOM" th:selected="${statementType == 'CUSTOM'}">Custom Period</option>
+        </select>
+        <div data-cs-st-year>
+          <label for="cs-st-year">Reporting year</label>
+          <input id="cs-st-year" class="cs-input cs-form-control" type="number" name="year" min="1900" max="9999" required th:value="${year}">
+        </div>
+        <div data-cs-st-month th:hidden="${statementType != 'MONTHLY'}">
+          <label for="cs-st-month-value">Contribution month</label>
+          <select class="cs-input cs-form-select" id="cs-st-month-value" name="statementMonth" th:disabled="${statementType != 'MONTHLY'}">
+            <option th:each="m : ${#numbers.sequence(1,12)}" th:value="${m}" th:selected="${m == statementMonth}" th:text="${T(java.time.Month).of(m).toString()}"></option>
+          </select>
+        </div>
+        <div class="cs-st-date-fields" data-cs-st-custom th:hidden="${statementType != 'CUSTOM'}">
+          <label>Start date<input class="cs-input cs-form-control" type="date" name="startDate" th:value="${startDate}" th:disabled="${statementType != 'CUSTOM'}" th:required="${statementType == 'CUSTOM'}"><small>First day of the starting month</small></label>
+          <label>End date<input class="cs-input cs-form-control" type="date" name="endDate" th:value="${endDate}" th:disabled="${statementType != 'CUSTOM'}" th:required="${statementType == 'CUSTOM'}"><small>Last day of the ending month</small></label>
+        </div>
+        <p class="cs-st-period-help">Contribution-month basis; custom periods are complete months and limited to 120 months. Current settlements include later payments and reversals.</p>
+      </fieldset>
+
+      <!-- Step 3: Generate -->
+      <fieldset class="cs-st-step cs-st-step--generate">
+        <legend><span class="cs-st-step-number">3</span> Generate &amp; Review</legend>
+        <p>Review obligations, payment history and outstanding contributions before exporting.</p>
+        <button id="cs-st-generate" class="cs-btn cs-btn-primary" type="submit">
+          <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+          <span>Generate Statement</span>
+        </button>
+        <a class="cs-btn cs-btn-outline" th:href="@{/admin/contribution-workspace(tab='statement',year=${year})}">Reset Selection</a>
+        <small><i class="bi bi-shield-check" aria-hidden="true"></i> Read-only reporting. Financial records are not changed.</small>
+      </fieldset>
+
+    </div>
+  </form>
+
+  <div class="cs-st-preview-shell" th:if="${statementReport != null}" th:with="r=${statementReport},s=${statementReport.summary},e=${statementReport.employee}">
+    <div class="cs-st-preview-toolbar">
+      <div>
+        <span class="cs-st-eyebrow">GENERATED STATEMENT</span>
+        <h3 th:text="|${e.fullName} &middot; ${e.employeeId}|"></h3>
+        <p th:text="|${#temporals.format(s.fromMonth,'MMM yyyy')} to ${#temporals.format(s.toMonth,'MMM yyyy')}|"></p>
+      </div>
+      <div class="cs-st-actions cs-st-export">
+        <a class="cs-btn cs-btn-primary" data-cs-report-export th:href="@{/admin/contribution-workspace/statement/export(employeeId=${e.employeeId},year=${year},statementType=${statementType},statementMonth=${statementMonth},startDate=${startDate},endDate=${endDate})}">
+          <i class="bi bi-file-earmark-excel" aria-hidden="true"></i> Download Excel
+        </a>
+        <button class="cs-btn cs-btn-outline" type="button" id="cs-st-print">
+          <i class="bi bi-printer" aria-hidden="true"></i> Print / Save as PDF
+        </button>
+      </div>
+    </div>
+    <p class="cs-st-draft-notice" hidden>Selection changed. Generate a new statement to refresh this preview and enable exports.</p>
+    <p class="cs-st-feedback" data-cs-report-feedback role="status" aria-live="polite"></p>
+
+    <article id="cs-st-print-body" class="cs-st-statement-preview" aria-label="Employee contribution statement">
+      <header class="cs-st-document-header">
+        <h2>National Bank PLC</h2>
+        <p>FundAxis &mdash; Employee Fund Management System</p>
+        <h3>EMPLOYEE CONTRIBUTION STATEMENT</h3>
+      </header>
+
+      <dl class="cs-st-employee-summary">
+        <div><dt>Employee ID</dt><dd th:text="${e.employeeId}"></dd></div>
+        <div><dt>Full name</dt><dd th:text="${e.fullName}"></dd></div>
+        <div><dt>Designation</dt><dd th:text="${e.employeeDesignation}"></dd></div>
+        <div><dt>Fund joining date</dt><dd th:text="${e.fundJoinDate != null ? #temporals.format(e.fundJoinDate,'dd MMM yyyy') : 'Not recorded'}"></dd></div>
+        <div><dt>Fund exit date</dt><dd th:text="${e.fundExitDate != null ? #temporals.format(e.fundExitDate,'dd MMM yyyy') : 'Not recorded'}"></dd></div>
+        <div><dt>Employee status</dt><dd th:text="${e.employeeStatus}"></dd></div>
+        <div><dt>Contribution period</dt><dd th:text="|${#temporals.format(s.fromMonth,'MMM yyyy')} to ${#temporals.format(s.toMonth,'MMM yyyy')}|"></dd></div>
+        <div><dt>Generated on</dt><dd th:text="${r.generatedOn}"></dd></div>
+      </dl>
+
+      <div class="cs-st-summary">
+        <div><span>Total recorded monthly due</span><strong th:text="|&#2547;${#numbers.formatDecimal(s.expected,1,'COMMA',2,'POINT')}|"></strong></div>
+        <div><span>Net direct cash received</span><strong th:text="|&#2547;${#numbers.formatDecimal(s.collected,1,'COMMA',2,'POINT')}|"></strong></div>
+        <div><span>Applied member credit</span><strong th:text="|&#2547;${#numbers.formatDecimal(s.creditApplied,1,'COMMA',2,'POINT')}|"></strong></div>
+        <div><span>Total settled</span><strong th:text="|&#2547;${#numbers.formatDecimal(s.totalSettled,1,'COMMA',2,'POINT')}|"></strong></div>
+        <div><span>Outstanding balance</span><strong th:text="|&#2547;${#numbers.formatDecimal(s.outstanding,1,'COMMA',2,'POINT')}|"></strong></div>
+        <div><span>Paid contribution months</span><strong th:text="${r.paidContributionMonths()}"></strong></div>
+        <div><span>Pending contribution months</span><strong th:text="${r.pendingCount()}"></strong></div>
+        <div><span>Reversed payment records</span><strong th:text="${r.reversalCount()}"></strong></div>
+      </div>
+
+      <p class="cs-st-note">Amounts are based on recorded obligations. Reversed payments and credit allocations remain visible for audit but are excluded from active settlement totals.</p>
+
+      <h4><i class="bi bi-list-columns-reverse text-success" aria-hidden="true"></i> Contribution Obligations</h4>
+      <p th:if="${s.contributions.isEmpty()}" class="cs-st-note">No contribution history exists for this employee in the selected period.</p>
+
+      <div class="cs-st-table-wrap">
+        <table class="cs-st-transaction-table cs-st-obligations">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Recorded Monthly Due &middot; BDT</th>
+              <th>Net Direct Payment &middot; BDT</th>
+              <th>Applied Member Credit &middot; BDT</th>
+              <th>Outstanding Balance &middot; BDT</th>
+              <th>Settlement Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="m : ${r.months}">
+              <td th:text="${#temporals.format(m.month,'MMM yyyy')}"></td>
+              <td class="cs-st-money" th:text="${m.status == 'NOT CREATED' or m.status == 'NOT YET JOINED' or m.status == 'AFTER EXIT' ? '—' : '৳' + #numbers.formatDecimal(m.expected,1,'COMMA',2,'POINT')}"></td>
+              <td class="cs-st-money" th:text="${m.status == 'NOT CREATED' or m.status == 'NOT YET JOINED' or m.status == 'AFTER EXIT' ? '—' : '৳' + #numbers.formatDecimal(m.collected,1,'COMMA',2,'POINT')}"></td>
+              <td class="cs-st-money" th:text="${m.status == 'NOT CREATED' or m.status == 'NOT YET JOINED' or m.status == 'AFTER EXIT' ? '—' : '৳' + #numbers.formatDecimal(m.creditApplied,1,'COMMA',2,'POINT')}"></td>
+              <td class="cs-st-money" th:text="${m.status == 'NOT CREATED' or m.status == 'NOT YET JOINED' or m.status == 'AFTER EXIT' ? '—' : '৳' + #numbers.formatDecimal(m.outstanding,1,'COMMA',2,'POINT')}"></td>
+              <td><span class="cs-st-status" th:attr="data-status=${m.status}" th:text="${#strings.capitalize(#strings.toLowerCase(m.status))}"></span></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Grand totals</th>
+              <th class="cs-st-money" th:text="|&#2547;${#numbers.formatDecimal(s.expected,1,'COMMA',2,'POINT')}|"></th>
+              <th class="cs-st-money" th:text="|&#2547;${#numbers.formatDecimal(s.collected,1,'COMMA',2,'POINT')}|"></th>
+              <th class="cs-st-money" th:text="|&#2547;${#numbers.formatDecimal(s.creditApplied,1,'COMMA',2,'POINT')}|"></th>
+              <th class="cs-st-money" th:text="|&#2547;${#numbers.formatDecimal(s.outstanding,1,'COMMA',2,'POINT')}|"></th>
+              <th></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <h4><i class="bi bi-receipt text-success" aria-hidden="true"></i> Linked Payment Details</h4>
+      <p class="cs-st-note">Each obligation is counted once above. The payment history below explains cash receipts; these amounts must not be added again to the obligation totals. Reversed original amounts are retained for audit and excluded from net cash received.</p>
+      <p class="cs-st-note" th:if="${r.payments.isEmpty()}">No payment records exist for these obligations.</p>
+
+      <div class="cs-st-table-wrap" th:if="${!r.payments.isEmpty()}">
+        <table class="cs-st-transaction-table">
+          <thead>
+            <tr>
+              <th>Payment ID</th>
+              <th>Payment date</th>
+              <th>Contribution period</th>
+              <th>Amount &middot; BDT</th>
+              <th>Payment method</th>
+              <th>Reference</th>
+              <th>Status</th>
+              <th>Reversal date / reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="p : ${r.payments}">
+              <td th:text="${p.paymentId}"></td>
+              <td th:text="${#temporals.format(p.paymentDate,'dd MMM yyyy')}"></td>
+              <td th:text="${#temporals.format(p.contributionMonth,'MMM yyyy')}"></td>
+              <td class="cs-st-money" th:text="|&#2547;${#numbers.formatDecimal(p.amount,1,'COMMA',2,'POINT')}|"></td>
+              <td th:text="${p.displayMethod()}"></td>
+              <td th:text="${p.reference ?: 'Not recorded'}"></td>
+              <td><span class="cs-st-status" th:attr="data-status=${p.reversed ? 'REVERSED' : 'SUCCESSFUL'}" th:text="${p.reversed ? 'Reversed' : 'Recorded'}"></span></td>
+              <td>
+                <span th:text="${p.reversalDate != null ? #temporals.format(p.reversalDate,'dd MMM yyyy') : '—'}"></span>
+                <small th:if="${p.reversalReason != null}" th:text="${p.reversalReason}"></small>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4><i class="bi bi-clock-history text-success" aria-hidden="true"></i> Member Credit Allocation History</h4>
+      <details class="cs-st-credit-history">
+        <summary>View applied credit allocations and reversals (<span th:text="${r.allocations.size()}"></span>)</summary>
+        <p class="cs-st-note" th:if="${r.allocations.isEmpty()}">No member credit allocations are linked to these contribution records.</p>
+        <div class="cs-st-table-wrap mt-3" th:if="${!r.allocations.isEmpty()}">
+          <table class="cs-st-transaction-table">
+            <thead>
+              <tr>
+                <th>Credit reference</th>
+                <th>Contribution period</th>
+                <th>Allocated &middot; BDT</th>
+                <th>Allocation date</th>
+                <th>Status</th>
+                <th>Reversal date / reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="a : ${r.allocations}">
+                <td th:text="${a.reference ?: 'Not recorded'}"></td>
+                <td th:text="${#temporals.format(a.contributionMonth,'MMM yyyy')}"></td>
+                <td class="cs-st-money" th:text="|&#2547;${#numbers.formatDecimal(a.amount,1,'COMMA',2,'POINT')}|"></td>
+                <td th:text="${#temporals.format(a.appliedDate,'dd MMM yyyy')}"></td>
+                <td><span class="cs-st-status" th:attr="data-status=${a.reversed ? 'REVERSED' : 'APPLIED'}" th:text="${a.reversed ? 'Reversed' : 'Applied'}"></span></td>
+                <td>
+                  <span th:text="${a.reversalDate != null ? #temporals.format(a.reversalDate,'dd MMM yyyy') : '—'}"></span>
+                  <small th:if="${a.reversalReason != null}" th:text="${a.reversalReason}"></small>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <footer class="cs-st-document-footer">
+        System-generated internal contribution report. Current settlement status is shown for the selected contribution months, including later payments and current reversals. Opening capital, profit and historical as-of balances are excluded. No formal bank approval or certification is implied.
+      </footer>
+    </article>
+  </div>
+
+  <div class="cs-st-empty-state" th:if="${statementReport == null and reportError == null}">
+    <span class="cs-st-empty-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+    <div>
+      <h3>No Statement Generated</h3>
+      <p>Select an employee and reporting period to preview a contribution statement.</p>
+      <span>Verify the employee in step 1, then select Generate Statement.</span>
+    </div>
+  </div>
+
+</section>
+</body></html>

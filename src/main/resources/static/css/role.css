@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    FundAxis - Admin Role Management
    File: src/main/resources/static/css/role.css
 
@@ -27,8 +27,8 @@
     --role-text: #1f2d27;
     --role-muted: #6c7c74;
 
-    --role-bg: #f6f8f7;
-    --role-white: #ffffff;
+    --role-bg: var(--fa-app-background, #E5ECE8);
+    --role-white: var(--fa-card-background, #F0F4F1);
 
     --role-success: #157347;
     --role-success-soft: #e8f5ee;
@@ -409,7 +409,7 @@
     border: 1px solid var(--role-border-soft);
     border-radius: 12px;
 
-    background: #fbfcfb;
+    background: var(--fa-card-background, #F0F4F1);
 }
 
 .role-description-panel p {
@@ -437,7 +437,7 @@
     border: 1px solid var(--role-border-soft);
     border-radius: 12px;
 
-    background: #fbfcfb;
+    background: var(--fa-card-background, #F0F4F1);
 }
 
 .role-security-box-highlight {
@@ -528,7 +528,7 @@
     border: 1px solid var(--role-border-soft);
     border-radius: 12px;
 
-    background: #fbfcfb;
+    background: var(--fa-card-background, #F0F4F1);
 }
 
 .role-action-box-danger {

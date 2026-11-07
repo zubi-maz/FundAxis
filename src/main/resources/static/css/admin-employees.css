@@ -1,11 +1,20 @@
 /* ==========================================================
-   FundAxis - Admin Employee Management (page-specific additions)
+   FundAxis - Admin shared page additions
+   (originally Employee Management; also loaded by Contribution,
+   Loan and Loan Extension pages for buttons, modals, toolbar,
+   table footer and pagination).
    Loaded after dashboard.css and reuses its colour variables.
    Only adds what dashboard.css does not provide: brand-coloured
-   buttons, form focus states, the search toolbar and row actions.
+   buttons, form focus states, the search toolbar, the export
+   card, row actions, status badge variants, modals, pagination
+   and the per-row Clear/Remove buttons on the employee form.
    ========================================================== */
 
-/* ---------- Buttons ---------- */
+/* ==========================================================================
+   1. BUTTONS
+   ========================================================================== */
+
+/* Base button (used for links styled as buttons too). */
 .fa-btn {
     display: inline-flex;
     align-items: center;
@@ -21,23 +30,43 @@
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
+
+/* Visible keyboard-focus ring in brand green. */
+.fa-btn:focus-visible { outline: 3px solid rgba(2, 71, 49, 0.35); outline-offset: 2px; }
+
+/* Disabled state, shared by the .disabled class (used by JS) and :disabled. */
+.fa-btn:disabled,
+.fa-btn.disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+
+/* Smaller variant for table/toolbar buttons. */
 .fa-btn-sm { padding: 6px 12px; font-size: 0.83rem; border-radius: 8px; }
 
+/* Solid brand-green button (primary actions: Save, Upload). */
 .fa-btn-primary { background: var(--fa-green); border-color: var(--fa-green); color: #fff; }
 .fa-btn-primary:hover { background: var(--fa-green-dark); border-color: var(--fa-green-dark); color: #fff; }
 
+/* Outlined neutral button (secondary actions: Cancel, Add row, Clear). */
 .fa-btn-outline { background: var(--fa-white); border-color: var(--fa-border); color: var(--fa-green); }
 .fa-btn-outline:hover { background: var(--fa-soft); border-color: #BCD3C8; color: var(--fa-green); }
 
+/* Solid red button (destructive confirmations inside modals). */
 .fa-btn-danger { background: var(--fa-danger); border-color: var(--fa-danger); color: #fff; }
 .fa-btn-danger:hover { background: #912018; border-color: #912018; color: #fff; }
 
+/* Outlined red button (destructive but non-final actions, e.g. Remove row). */
 .fa-btn-outline-danger { background: var(--fa-white); border-color: #F4C7C1; color: var(--fa-danger); }
 .fa-btn-outline-danger:hover { background: #FDF1EF; border-color: var(--fa-danger); color: var(--fa-danger); }
 
-/* ---------- Form controls ---------- */
-.fa-label { margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: var(--fa-text); }
+/* ==========================================================================
+   2. FORM CONTROLS
+   ========================================================================== */
 
+/* Field labels (full size and small). */
+.fa-label { margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: var(--fa-text); }
+.fa-label-sm { font-size: 0.8rem; font-weight: 700; color: var(--fa-muted); }
+
+/* Inputs and selects: rounded corners + brand-green focus ring.
+   (Bootstrap provides the base .form-control styles; we only override look.) */
 .fa-input.form-control,
 .fa-input.form-select {
     border: 1px solid var(--fa-border);
@@ -45,21 +74,54 @@
     padding: 9px 12px;
     font-size: 0.93rem;
     color: var(--fa-text);
+    background-color: var(--fa-input-background);
 }
+.fa-input[type="file"] { background-color: var(--fa-input-background); }
+.fa-input.form-control-sm { padding: 7px 10px; font-size: 0.88rem; }
+
 .fa-input.form-control:focus,
 .fa-input.form-select:focus {
     border-color: var(--fa-green);
     box-shadow: 0 0 0 3px rgba(2, 71, 49, 0.15);
 }
 
-/* ---------- Page header ---------- */
+/* ==========================================================================
+   3. PAGE HEADER / TOOLBAR / EXPORT CARD
+   ========================================================================== */
+
+/* Grey subtitle under the page title. */
 .fa-page-subtitle { margin: 4px 0 8px; color: var(--fa-muted); font-size: 0.93rem; max-width: 640px; }
 
-/* ---------- Search toolbar ---------- */
+/* Search/filter toolbar inside a card. */
 .fa-toolbar { padding: 18px 22px; }
 
-/* ---------- Table extras ---------- */
+/* Soft-green card that holds the "Export Excel" action. */
+.fa-export-card {
+    padding: 16px 22px;
+    background: var(--fa-soft);
+    border: 1px solid var(--fa-border);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+}
+.fa-export-card .fa-btn { width: 100%; }
+
+/* ==========================================================================
+   4. STATUS BADGES (extra colour variants)
+   ========================================================================== */
+
+.fa-status.fa-status-info { background: #E0F2FE; color: #075985; }   /* blue */
+.fa-status.fa-status-danger { background: #FEE2E2; color: #991B1B; } /* red */
+
+/* ==========================================================================
+   5. TABLE EXTRAS
+   ========================================================================== */
+
+/* Employee ID cells are emphasized and never wrapped. */
 .fa-table .fa-cell-id { font-weight: 600; white-space: nowrap; }
+
+/* Fixed narrow column for the SL number. */
+.fa-table .fa-col-sl { width: 56px; white-space: nowrap; color: var(--fa-muted); }
+
+/* Bar under data tables (record counts, bulk actions, pagination). */
 .fa-table-footer {
     display: flex;
     flex-wrap: wrap;
@@ -73,17 +135,47 @@
     font-size: 0.85rem;
 }
 
-/* ---------- Row actions ---------- */
+/* ==========================================================================
+   6. ROW ACTIONS (Clear / Remove buttons in table rows)
+   ========================================================================== */
+
 .fa-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.fa-row-actions form { margin: 0; }
+.fa-row-actions form { margin: 0; }              /* neutralize Bootstrap form margins */
+.fa-row-actions .fa-btn { white-space: nowrap; }
 
-/* ---------- Pagination ---------- */
-.fa-pagination { margin: 0; --bs-pagination-active-bg: var(--fa-green); --bs-pagination-active-border-color: var(--fa-green); --bs-pagination-color: var(--fa-green); --bs-pagination-hover-color: var(--fa-green-dark); --bs-pagination-focus-color: var(--fa-green-dark); --bs-pagination-focus-box-shadow: 0 0 0 3px rgba(2, 71, 49, 0.15); }
+/* ==========================================================================
+   7. EMPLOYEE FORM ROWS (Add Employees page)
+   ========================================================================== */
 
-/* ---------- Modals ---------- */
+/* The Clear + Remove buttons share the last narrow column (col-md-1).
+   Give every button a small left gap, except the first one. */
+.fa-employee-row .col-md-1.text-md-end .btn { margin-left: 4px; }
+.fa-employee-row .col-md-1.text-md-end .btn:first-child { margin-left: 0; }
+
+/* ==========================================================================
+   8. PAGINATION (Bootstrap overrides in brand green)
+   ========================================================================== */
+
+.fa-pagination {
+    margin: 0;
+    --bs-pagination-active-bg: var(--fa-green);
+    --bs-pagination-active-border-color: var(--fa-green);
+    --bs-pagination-color: var(--fa-green);
+    --bs-pagination-hover-color: var(--fa-green-dark);
+    --bs-pagination-focus-color: var(--fa-green-dark);
+    --bs-pagination-focus-box-shadow: 0 0 0 3px rgba(2, 71, 49, 0.15);
+}
+
+/* ==========================================================================
+   9. MODALS
+   ========================================================================== */
+
 .modal-content { border: 1px solid var(--fa-border); border-radius: var(--fa-radius); }
 .modal-header, .modal-footer { border-color: var(--fa-border); }
 .modal-title { font-size: 1.1rem; font-weight: 700; }
+.modal-footer { flex-wrap: wrap; gap: 8px; }
+
+/* Soft info/note box used inside modals and forms (e.g. the EMP- prefix note). */
 .fa-modal-employee {
     margin-bottom: 14px;
     padding: 10px 14px;
@@ -92,10 +184,184 @@
     border-radius: 10px;
     font-size: 0.9rem;
 }
+.fa-modal-employee dd { overflow-wrap: anywhere; }
 
-/* ---------- Responsive ---------- */
+/* ==========================================================================
+   10. RESPONSIVE (phones)
+   ========================================================================== */
+
 @media (max-width: 575.98px) {
     .fa-toolbar { padding: 16px; }
+    .fa-export-card { padding: 16px; }
     .fa-table-footer { padding: 12px 16px; }
-    .fa-page-header .fa-btn { width: 100%; }
+    .fa-page-header .fa-btn { width: 100%; }          /* header buttons go full width */
+    .modal-footer .fa-btn { flex: 1 1 auto; }        /* modal buttons share the row */
 }
+
+/* ==========================================================================
+   11. PREMIUM FINTECH EMPLOYEE MODULE REDESIGN (.fa-emp-page)
+   ========================================================================== */
+
+/* Main scoped wrapper for employee management pages */
+.fa-emp-page { display: block; width: 100%; }
+
+/* Branded gradient hero banner with deep green tones and subtle glow */
+.fa-emp-hero {
+    background: linear-gradient(135deg, var(--fa-green-dark) 0%, var(--fa-green) 100%);
+    border-radius: var(--fa-radius);
+    padding: 32px;
+    color: #fff;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(1, 58, 41, 0.18);
+    position: relative;
+    overflow: hidden;
+}
+.fa-emp-hero::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -40px;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.fa-emp-hero .fa-page-title { color: #fff; font-size: 1.8rem; font-weight: 700; margin-bottom: 6px; }
+.fa-emp-hero .fa-page-subtitle { color: rgba(255, 255, 255, 0.82); font-size: 0.98rem; margin-bottom: 16px; }
+.fa-emp-hero .breadcrumb { --bs-breadcrumb-divider-color: rgba(255, 255, 255, 0.5); }
+.fa-emp-hero .breadcrumb-item a { color: #A9E0C6; text-decoration: none; }
+.fa-emp-hero .breadcrumb-item.active { color: rgba(255, 255, 255, 0.7); }
+
+/* KPI summary cards with hover lift and top accent border */
+.fa-emp-stat {
+    background: var(--fa-white);
+    border: 1px solid var(--fa-border);
+    border-top: 3px solid var(--fa-green);
+    border-radius: var(--fa-radius);
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    box-shadow: var(--fa-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.fa-emp-stat:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(2, 71, 49, 0.1); }
+.fa-emp-stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--fa-soft);
+    color: var(--fa-green);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+.fa-emp-stat-icon.emerald { background: #EAF6F0; color: var(--fa-success); }
+.fa-emp-stat-icon.amber { background: #FFF7E3; color: var(--fa-warning); }
+.fa-emp-stat-label { font-size: 0.82rem; font-weight: 600; color: var(--fa-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 2px; }
+.fa-emp-stat-value { font-size: 1.85rem; font-weight: 700; color: var(--fa-text); margin: 0; line-height: 1.15; }
+
+/* Unified filter toolbar */
+.fa-emp-toolbar { background: var(--fa-white); border: 1px solid var(--fa-border); border-radius: var(--fa-radius); padding: 22px; box-shadow: var(--fa-shadow); }
+
+/* Elegant export panel */
+.fa-emp-export-card { background: var(--fa-white); border: 1px solid var(--fa-border); border-radius: var(--fa-radius); padding: 22px; box-shadow: var(--fa-shadow); height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+
+/* Circular avatar with initials */
+.fa-emp-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--fa-green);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.88rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(2, 71, 49, 0.2);
+}
+.fa-emp-avatar-lg {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--fa-green);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.75rem;
+    box-shadow: 0 4px 14px rgba(2, 71, 49, 0.25);
+    border: 3px solid #fff;
+}
+
+/* Status dot badge */
+.fa-emp-status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+.fa-emp-status-dot::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.fa-emp-status-dot.active { background: #EAF6F0; color: var(--fa-success); }
+.fa-emp-status-dot.active::before { background: var(--fa-success); box-shadow: 0 0 0 3px rgba(22, 121, 74, 0.2); }
+.fa-emp-status-dot.inactive { background: #FDF1EF; color: var(--fa-danger); }
+.fa-emp-status-dot.inactive::before { background: var(--fa-danger); box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.2); }
+
+/* Soft designation pill */
+.fa-emp-desig-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: var(--fa-soft);
+    color: var(--fa-green-dark);
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid var(--fa-border);
+}
+
+/* Bulk import dropzone card */
+.fa-emp-dropzone {
+    background: var(--fa-white);
+    border: 2px dashed #BCD3C8;
+    border-radius: var(--fa-radius);
+    padding: 24px;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.fa-emp-dropzone:hover { border-color: var(--fa-green); background: #FAFDFB; }
+
+/* Employee add form row card */
+.fa-emp-row-card {
+    background: var(--fa-white);
+    border: 1px solid var(--fa-border);
+    border-left: 4px solid var(--fa-green);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(2, 71, 49, 0.04);
+}
+
+/* Profile details info card */
+.fa-emp-info-card {
+    background: var(--fa-white);
+    border: 1px solid var(--fa-border);
+    border-radius: 12px;
+    padding: 18px;
+    height: 100%;
+    box-shadow: var(--fa-shadow);
+}
+

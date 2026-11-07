@@ -52,7 +52,7 @@ public class RepaymentService {
         // Find parent repayment schedule.
         RepaymentSchedule schedule =
                 repaymentScheduleRepository
-                        .findById(repaymentScheduleId)
+                        .findByIdForUpdate(repaymentScheduleId)
                         .orElseThrow(() ->
                                 new RepaymentScheduleNotFoundException(
                                         "Repayment schedule not found with ID: "
@@ -305,7 +305,9 @@ public class RepaymentService {
     ) {
 
         Repayment repayment =
-                getRepaymentById(repaymentId);
+                repaymentRepository.findByIdForUpdate(repaymentId)
+                        .orElseThrow(() -> new RepaymentNotFoundException(
+                                "Repayment not found with ID: " + repaymentId));
 
 
         // Only completed repayment can be reversed.
@@ -339,8 +341,11 @@ public class RepaymentService {
         }
 
 
-        RepaymentSchedule schedule =
-                repayment.getRepaymentSchedule();
+        RepaymentSchedule schedule = repaymentScheduleRepository
+                .findByIdForUpdate(repayment.getRepaymentSchedule().getId())
+                .orElseThrow(() -> new RepaymentScheduleNotFoundException(
+                        "Repayment schedule not found with ID: "
+                                + repayment.getRepaymentSchedule().getId()));
 
 
         if (schedule == null) {
@@ -604,6 +609,12 @@ public class RepaymentService {
 
             throw new IllegalArgumentException(
                     "Repayment date is required"
+            );
+        }
+
+        if (repayment.getRepaymentDate().isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException(
+                    "Repayment date cannot be in the future"
             );
         }
 

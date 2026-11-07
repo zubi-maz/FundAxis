@@ -1,4 +1,4 @@
-/* ===== FundAxis Loan Disbursement module styles (reuses dashboard.css and admin-employees.css) ===== */
+﻿/* ===== FundAxis Loan Disbursement module styles (reuses dashboard.css and admin-employees.css) ===== */
 
 /* Brand colour tokens used only by this module */
 :root { --fd-brand: #024731; --fd-brand-soft: #e6f1ed; --fd-line: #dbe5e1; --fd-muted: #5b6b66; } /* Brand green, soft tint, border, muted text */
@@ -20,7 +20,7 @@
 
 /* ---------- Amount summary boxes ---------- */
 .fd-amount-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.25rem; } /* Three boxes in a row */
-.fd-amount-box { border: 1px solid var(--fd-line); border-radius: .75rem; padding: 1rem 1.1rem; background: #fff; } /* Plain amount box */
+.fd-amount-box { border: 1px solid var(--fd-line); border-radius: .75rem; padding: 1rem 1.1rem; background: var(--fa-card-background, #F0F4F1); } /* Plain amount box */
 .fd-amount-box-key { border-color: var(--fd-brand); background: var(--fd-brand-soft); } /* Highlight the remaining amount */
 .fd-amount-label { display: block; font-size: .8rem; color: var(--fd-muted); } /* Amount caption */
 .fd-amount-value { display: block; font-size: 1.4rem; font-weight: 700; color: var(--fd-brand); font-variant-numeric: tabular-nums; } /* Large amount */
@@ -28,7 +28,7 @@
 /* ---------- Workflow action bar ---------- */
 .fd-action-bar { display: flex; flex-wrap: wrap; gap: .75rem; padding: 1.25rem; } /* Buttons wrap on small screens */
 .fd-terminal-note { padding: 1.25rem; color: var(--fd-muted); margin: 0; } /* Message shown when no action is available */
-.fa-btn-danger-outline { border: 1px solid #b42318; color: #b42318; background: #fff; } /* Destructive outline button */
+.fa-btn-danger-outline { border: 1px solid #b42318; color: #b42318; background: var(--fa-card-background, #F0F4F1); } /* Destructive outline button */
 .fa-btn-danger-outline:hover { background: #b42318; color: #fff; } /* Fill on hover */
 .fa-btn-danger { border: 1px solid #b42318; color: #fff; background: #b42318; } /* Destructive solid button */
 
@@ -37,12 +37,12 @@
 .fa-form-section.pt-0 { border-top: 0; } /* No divider for blocks attached to the section above */
 .fa-form-section-title { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fd-brand); margin: 0 0 1rem; } /* Small section heading instead of a large h3 */
 .fa-form-help { font-size: .8rem; color: var(--fd-muted); margin-top: .35rem; } /* Small muted help text under a field */
-.fa-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; background: #f8fbfa; border-radius: 0 0 .75rem .75rem; } /* Right-aligned button bar with spacing */
+.fa-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; background: var(--fa-table-header, #E2EAE5); border-radius: 0 0 .75rem .75rem; } /* Right-aligned button bar with spacing */
 
 /* ---------- Form helpers ---------- */
 .fd-info-panel { border: 1px solid var(--fd-line); border-left: 4px solid var(--fd-brand); background: var(--fd-brand-soft); border-radius: .5rem; padding: 1rem 1.25rem; } /* Rules panel on the form */
 .fd-info-panel ul { margin: .5rem 0 0; padding-left: 1.2rem; } /* Tidy list spacing */
-.fd-summary-list { margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid var(--fd-line); border-radius: .5rem; background: #f8fbfa; } /* Summary shown inside the complete modal */
+.fd-summary-list { margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid var(--fd-line); border-radius: .5rem; background: var(--fa-table-header, #E2EAE5); } /* Summary shown inside the complete modal */
 .fd-summary-list div { display: flex; justify-content: space-between; gap: 1rem; padding: .2rem 0; } /* One summary row */
 
 /* ---------- Keyboard focus (visible and accessible) ---------- */

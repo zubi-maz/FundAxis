@@ -324,6 +324,8 @@ public class AdminRepaymentController {
     ///---------- Display Form For Recording A New Repayment ----------
     @GetMapping("/new")
     public String showAddRepaymentForm(
+            @RequestParam(required = false) String loanApplicationId,
+            @RequestParam(required = false) Integer installmentNumber,
             Model model
     ) {
 
@@ -346,13 +348,13 @@ public class AdminRepaymentController {
         // Business identifiers are not direct Repayment fields.
         model.addAttribute(
                 "loanApplicationId",
-                ""
+                loanApplicationId == null ? "" : loanApplicationId.trim()
         );
 
 
         model.addAttribute(
                 "installmentNumber",
-                null
+                installmentNumber
         );
 
 

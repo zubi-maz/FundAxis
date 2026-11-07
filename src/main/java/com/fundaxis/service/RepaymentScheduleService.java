@@ -36,7 +36,14 @@ public class RepaymentScheduleService {
     public RepaymentSchedule createRepaymentSchedule(Long loanId, RepaymentSchedule repaymentSchedule) {
 
         // Find the parent loan
-        Loan loan = loanRepository.findById(loanId).orElseThrow(() -> new LoanNotFoundException("Loan not found with ID: " + loanId));
+        if (loanId == null) {
+            throw new IllegalArgumentException("Loan is required");
+        }
+        // Serialize schedule creation for this loan; the database unique constraint
+        // remains the final guard if a concurrent writer bypasses this service.
+        Loan loan = loanRepository.findByIdForUpdate(loanId).orElseThrow(() -> new LoanNotFoundException("Loan not found with ID: " + loanId));
+
+        validateScheduleIdentity(repaymentSchedule);
 
         // Prevent duplicate installment numbers for the same loan
         if (repaymentScheduleRepository.existsByLoanIdAndInstallmentNumber(loanId, repaymentSchedule.getInstallmentNumber())) {
@@ -164,7 +171,7 @@ public class RepaymentScheduleService {
     public RepaymentSchedule updateRepaymentSchedule(Long id, RepaymentSchedule updatedSchedule) {
 
         // Find the existing repayment schedule
-        RepaymentSchedule existingSchedule = getRepaymentScheduleById(id);
+        RepaymentSchedule existingSchedule = findScheduleForUpdate(id);
 
         // Only PENDING installments can be normally updated
         if (existingSchedule.getInstallmentStatus() != RepaymentSchedule.InstallmentStatus.PENDING) {
@@ -175,6 +182,7 @@ public class RepaymentScheduleService {
         // Copy only administrator-editable schedule fields
         BeanUtils.copyProperties(updatedSchedule, existingSchedule, "id", "loan", "installmentNumber", "paidAmount", "remainingAmount", "installmentStatus", "paymentDate", "createdAt", "updatedAt");
 
+        validateScheduleIdentity(existingSchedule);
         // Validate updated installment financial values
         validateInstallmentAmounts(existingSchedule);
 
@@ -198,7 +206,7 @@ public class RepaymentScheduleService {
     @Transactional
     public RepaymentSchedule markAsOverdue(Long id) {
 
-        RepaymentSchedule schedule = getRepaymentScheduleById(id);
+        RepaymentSchedule schedule = findScheduleForUpdate(id);
 
         // Paid installments cannot become overdue
         if (schedule.getInstallmentStatus() == RepaymentSchedule.InstallmentStatus.PAID) {
@@ -219,13 +227,13 @@ public class RepaymentScheduleService {
         }
 
         // Due date must already have passed
-        if (!schedule.getDueDate().isBefore(LocalDate.now())) {
+        if (schedule.getDueDate() == null || !schedule.getDueDate().isBefore(LocalDate.now())) {
             throw new IllegalStateException("Installment due date has not passed yet: " + id);
 
         }
 
         // Installment must still have an outstanding amount
-        if (schedule.getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        if (schedule.getRemainingAmount() == null || schedule.getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalStateException("Installment has no remaining amount to become overdue: " + id);
 
         }
@@ -241,7 +249,7 @@ public class RepaymentScheduleService {
     @Transactional
     public RepaymentSchedule cancelRepaymentSchedule(Long id) {
 
-        RepaymentSchedule schedule = getRepaymentScheduleById(id);
+        RepaymentSchedule schedule = findScheduleForUpdate(id);
 
         // Only untouched PENDING installments can be cancelled
         if (schedule.getInstallmentStatus() != RepaymentSchedule.InstallmentStatus.PENDING) {
@@ -250,7 +258,7 @@ public class RepaymentScheduleService {
         }
 
         // LoanRepayment schedules with recorded payments cannot be cancelled
-        if (schedule.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+        if (schedule.getPaidAmount() == null || schedule.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
             throw new IllegalStateException("LoanRepayment schedule with recorded payments cannot be cancelled: " + id);
 
         }
@@ -279,6 +287,10 @@ public class RepaymentScheduleService {
 
         }
 
+        validateMoneyPrecision(principalAmount, "Principal amount");
+        validateMoneyPrecision(interestAmount, "Interest amount");
+        validateMoneyPrecision(totalInstallmentAmount, "Total installment amount");
+
         // Principal cannot be negative
         if (principalAmount.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Principal amount cannot be negative");
@@ -304,5 +316,32 @@ public class RepaymentScheduleService {
             throw new IllegalArgumentException("Total installment amount must equal principal amount plus interest amount");
 
         }
+    }
+
+    private void validateScheduleIdentity(RepaymentSchedule schedule) {
+        if (schedule == null || schedule.getInstallmentNumber() == null || schedule.getInstallmentNumber() < 1) {
+            throw new IllegalArgumentException("Installment number must be at least 1");
+        }
+        if (schedule.getDueDate() == null) {
+            throw new IllegalArgumentException("Due date is required");
+        }
+        if (schedule.getDueDate().getYear() < 1 || schedule.getDueDate().getYear() > 9999) {
+            throw new IllegalArgumentException("Due date is outside the supported SQL Server date range");
+        }
+    }
+
+    private void validateMoneyPrecision(BigDecimal amount, String field) {
+        if (amount.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException(field + " cannot have more than two decimal places");
+        }
+        int integerDigits = Math.max(0, amount.precision() - amount.scale());
+        if (amount.precision() > 20 || integerDigits > 18) {
+            throw new IllegalArgumentException(field + " exceeds the supported database precision");
+        }
+    }
+
+    private RepaymentSchedule findScheduleForUpdate(Long id) {
+        return repaymentScheduleRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new RepaymentScheduleNotFoundException("LoanRepayment schedule not found with ID: " + id));
     }
 }

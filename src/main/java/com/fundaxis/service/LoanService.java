@@ -8,11 +8,13 @@ import com.fundaxis.exception.LoanNotFoundException;
 import com.fundaxis.repository.EmployeeRepository;
 import com.fundaxis.repository.LoanRepository;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -20,6 +22,9 @@ public class LoanService {
 
     private final LoanRepository loanRepository;
     private final EmployeeRepository employeeRepository;
+
+    @Value("${fundaxis.loans.approval-enabled:false}")
+    private boolean loanApprovalEnabled;
 
     public LoanService(LoanRepository loanRepository, EmployeeRepository employeeRepository) {
         this.loanRepository = loanRepository;
@@ -32,10 +37,28 @@ public class LoanService {
 
     ///---------- Create A New Loan For An Existing Employee ----------
     @Transactional
-    public Loan createLoan(String employeeId, Loan loan) {
+    public Loan createLoan(String employeeId, String guarantorEmployeeId,
+                           String legacyGuarantorName, Loan loan, String authenticatedCreator) {
+
+        if (authenticatedCreator == null || authenticatedCreator.isBlank()
+                || authenticatedCreator.trim().length() > 100) {
+            throw new IllegalArgumentException("Authenticated loan creator is required");
+        }
 
         // Find the employee using the official Employee ID
         Employee employee = employeeRepository.findByEmployeeId(employeeId).orElseThrow(() -> new EmployeeNotFoundException("Employee with Employee ID: " + employeeId + " does not exist"));
+
+        if (loan.getLoanApplicationId() == null || loan.getLoanApplicationId().isBlank()) {
+            throw new IllegalArgumentException("Loan application ID is required");
+        }
+        loan.setLoanApplicationId(loan.getLoanApplicationId().trim());
+
+        if (loan.getRequestedAmount() == null || loan.getRequestedAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Requested amount must be greater than zero");
+        }
+        if (loan.getTenureMonths() == null || loan.getTenureMonths() < 1) {
+            throw new IllegalArgumentException("Loan tenure must be at least one month");
+        }
 
         // Prevent duplicate Loan Application ID
         if (loanRepository.existsByLoanApplicationId(loan.getLoanApplicationId())) {
@@ -46,6 +69,11 @@ public class LoanService {
 
         // Connect the loan with the employee
         loan.setEmployee(employee);
+        loan.setCreatedBy(authenticatedCreator.trim());
+        loan.setRejectedBy(null);
+        loan.setRejectedAt(null);
+
+        applyGuarantorSelection(loan, employee, guarantorEmployeeId, legacyGuarantorName);
 
         // Every new loan starts as DRAFT
         loan.setLoanStatus(Loan.LoanStatus.DRAFT);
@@ -55,7 +83,10 @@ public class LoanService {
 
         // Approval-controlled fields must start empty
         loan.setApprovedAmount(null);
+        loan.setApprovedTenureMonths(null);
         loan.setApprovalDate(null);
+        loan.setApprovedBy(null);
+        loan.setApprovedAt(null);
         loan.setInterestRate(null);
 
         // Rejection information must start empty
@@ -179,8 +210,15 @@ public class LoanService {
     @Transactional
     public Loan updateLoan(Long id, Loan updatedLoan) {
 
+        return updateLoan(id, updatedLoan, null, null);
+    }
+
+    @Transactional
+    public Loan updateLoan(Long id, Loan updatedLoan, String guarantorEmployeeId,
+                           String legacyGuarantorName) {
+
         // Find the existing loan
-        Loan existingLoan = loanRepository.findById(id)
+        Loan existingLoan = loanRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new LoanNotFoundException("Loan with database ID: " + id + " does not exist"));
 
         // Only DRAFT loans can be changed through normal update
@@ -189,6 +227,9 @@ public class LoanService {
 
         }
 
+        applyGuarantorSelection(updatedLoan, existingLoan.getEmployee(),
+                guarantorEmployeeId, legacyGuarantorName);
+
         // Copy editable fields while protecting system-controlled fields
         BeanUtils.copyProperties(
                 updatedLoan,
@@ -196,8 +237,14 @@ public class LoanService {
                 "id",
                 "loanApplicationId",
                 "employee",
+                "createdBy",
                 "approvedAmount",
+                "approvedTenureMonths",
                 "approvalDate",
+                "approvedBy",
+                "approvedAt",
+                "rejectedBy",
+                "rejectedAt",
                 "interestRate",
                 "loanStatus",
                 "eligibilityStatus",
@@ -217,7 +264,7 @@ public class LoanService {
     @Transactional
     public Loan submitLoan(Long id) {
 
-        Loan existingLoan = loanRepository.findById(id).orElseThrow(() -> new LoanNotFoundException("Loan with database ID: " + id + " does not exist"));
+        Loan existingLoan = findLoanForUpdate(id);
 
         // Only DRAFT loans can be submitted
         if (existingLoan.getLoanStatus() != Loan.LoanStatus.DRAFT) {
@@ -236,7 +283,7 @@ public class LoanService {
     @Transactional
     public Loan startLoanReview(Long id) {
 
-        Loan existingLoan = loanRepository.findById(id).orElseThrow(() -> new LoanNotFoundException("Loan with database ID: " + id + " does not exist"));
+        Loan existingLoan = findLoanForUpdate(id);
 
         // Only SUBMITTED loans can enter review
         if (existingLoan.getLoanStatus() != Loan.LoanStatus.SUBMITTED) {
@@ -255,7 +302,7 @@ public class LoanService {
     @Transactional
     public Loan updateEligibilityStatus(Long id, Loan.EligibilityStatus eligibilityStatus) {
 
-        Loan existingLoan = loanRepository.findById(id).orElseThrow(() -> new LoanNotFoundException("Loan with database ID: " + id + " does not exist"));
+        Loan existingLoan = findLoanForUpdate(id);
 
         // Eligibility is determined during loan review
         if (existingLoan.getLoanStatus() != Loan.LoanStatus.UNDER_REVIEW) {
@@ -278,9 +325,12 @@ public class LoanService {
 
     ///---------- Approve An Eligible Loan That Is Under Review ----------
     @Transactional
-    public Loan approveLoan(Long id, BigDecimal approvedAmount, BigDecimal interestRate) {
+    public Loan approveLoan(Long id, BigDecimal approvedAmount, BigDecimal interestRate,
+                            Integer approvedTenureMonths,
+                            String authenticatedApprover) {
 
-        Loan existingLoan = loanRepository.findById(id).orElseThrow(() -> new LoanNotFoundException("Loan with database ID: " + id + " does not exist"));
+        Loan existingLoan = findLoanForUpdate(id);
+        requireLoanApprovalEnabled();
 
         // Only loans under review can be approved
         if (existingLoan.getLoanStatus() != Loan.LoanStatus.UNDER_REVIEW) {
@@ -324,10 +374,31 @@ public class LoanService {
 
         }
 
+        int approvedTerm = approvedTenureMonths == null
+                ? existingLoan.getTenureMonths() : approvedTenureMonths;
+        if (approvedTerm < 1) {
+            throw new IllegalArgumentException("Approved tenure must be at least one month");
+        }
+
+        if (authenticatedApprover == null || authenticatedApprover.isBlank()) {
+            throw new IllegalArgumentException("Authenticated approver is required");
+        }
+        if (existingLoan.getCreatedBy() == null || existingLoan.getCreatedBy().isBlank()) {
+            throw new IllegalStateException("This legacy loan has no recorded creator; independent approval cannot be verified.");
+        }
+        if (existingLoan.getCreatedBy().equalsIgnoreCase(authenticatedApprover.trim())) {
+            throw new IllegalStateException("The loan creator cannot approve their own loan.");
+        }
+
         // Store approval information
         existingLoan.setApprovedAmount(approvedAmount);
         existingLoan.setInterestRate(interestRate);
+        existingLoan.setApprovedTenureMonths(approvedTerm);
         existingLoan.setApprovalDate(LocalDate.now());
+        existingLoan.setApprovedBy(authenticatedApprover.trim());
+        existingLoan.setApprovedAt(LocalDateTime.now());
+        existingLoan.setRejectedBy(null);
+        existingLoan.setRejectedAt(null);
 
         // Clear any previous rejection information
         existingLoan.setRejectionReason(null);
@@ -341,9 +412,10 @@ public class LoanService {
 
     ///---------- Reject A Loan That Is Currently Under Review ----------
     @Transactional
-    public Loan rejectLoan(Long id, String rejectionReason) {
+    public Loan rejectLoan(Long id, String rejectionReason, String authenticatedReviewer) {
 
-        Loan existingLoan = loanRepository.findById(id).orElseThrow(() -> new LoanNotFoundException("Loan with database ID: " + id + " does not exist"));
+        Loan existingLoan = findLoanForUpdate(id);
+        requireLoanApprovalEnabled();
 
         // Only loans under review can be rejected
         if (existingLoan.getLoanStatus() != Loan.LoanStatus.UNDER_REVIEW) {
@@ -356,13 +428,31 @@ public class LoanService {
             throw new IllegalArgumentException("Rejection reason is required");
 
         }
+        if (rejectionReason.trim().length() > 1000) {
+            throw new IllegalArgumentException("Rejection reason cannot exceed 1000 characters");
+        }
+        if (authenticatedReviewer == null || authenticatedReviewer.isBlank()
+                || authenticatedReviewer.trim().length() > 100) {
+            throw new IllegalArgumentException("Authenticated reviewer is required");
+        }
+        if (existingLoan.getCreatedBy() == null || existingLoan.getCreatedBy().isBlank()) {
+            throw new IllegalStateException("This legacy loan has no recorded creator; independent review cannot be verified.");
+        }
+        if (existingLoan.getCreatedBy().equalsIgnoreCase(authenticatedReviewer.trim())) {
+            throw new IllegalStateException("The loan creator cannot reject their own loan.");
+        }
 
         // Clear approval-controlled information
         existingLoan.setApprovedAmount(null);
+        existingLoan.setApprovedTenureMonths(null);
         existingLoan.setApprovalDate(null);
+        existingLoan.setApprovedBy(null);
+        existingLoan.setApprovedAt(null);
         existingLoan.setInterestRate(null);
 
-        existingLoan.setRejectionReason(rejectionReason);
+        existingLoan.setRejectionReason(rejectionReason.trim());
+        existingLoan.setRejectedBy(authenticatedReviewer.trim());
+        existingLoan.setRejectedAt(LocalDateTime.now());
 
         existingLoan.setLoanStatus(Loan.LoanStatus.REJECTED);
 
@@ -375,7 +465,7 @@ public class LoanService {
     @Transactional
     public Loan cancelLoan(Long id) {
 
-        Loan existingLoan = loanRepository.findById(id).orElseThrow(() -> new LoanNotFoundException("Loan with database ID: " + id + " does not exist"));
+        Loan existingLoan = findLoanForUpdate(id);
 
         // Only DRAFT or SUBMITTED loans can be canceled here
         if (existingLoan.getLoanStatus() != Loan.LoanStatus.DRAFT && existingLoan.getLoanStatus() != Loan.LoanStatus.SUBMITTED) {
@@ -388,5 +478,59 @@ public class LoanService {
         return loanRepository.save(existingLoan);
 
 
+    }
+
+    private Loan findLoanForUpdate(Long id) {
+        return loanRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new LoanNotFoundException(
+                        "Loan with database ID: " + id + " does not exist"));
+    }
+
+    public boolean isLoanApprovalEnabled() {
+        return loanApprovalEnabled;
+    }
+
+    private void requireLoanApprovalEnabled() {
+        if (!loanApprovalEnabled) {
+            throw new IllegalStateException(
+                    "Loan approval and rejection are disabled until independent checker authority and bank policy are approved and configured.");
+        }
+    }
+
+    private void applyGuarantorSelection(Loan target, Employee borrower,
+                                         String requestedGuarantorEmployeeId,
+                                         String requestedLegacyName) {
+        boolean explicitSelection = requestedGuarantorEmployeeId != null
+                || requestedLegacyName != null;
+        String employeeId = explicitSelection
+                ? requestedGuarantorEmployeeId
+                : (target.getGuarantorEmployee() == null
+                    ? null : target.getGuarantorEmployee().getEmployeeId());
+        String legacyName = explicitSelection
+                ? requestedLegacyName : target.getLegacyGuarantorName();
+
+        Employee guarantor = null;
+        if (employeeId != null && !employeeId.isBlank()) {
+            guarantor = employeeRepository.findByEmployeeId(employeeId.trim())
+                    .orElseThrow(() -> new EmployeeNotFoundException(
+                            "Guarantor employee ID does not exist: " + employeeId.trim()));
+            if (borrower.getId().equals(guarantor.getId())) {
+                throw new IllegalArgumentException("Borrower cannot be their own guarantor");
+            }
+            if (legacyName != null && !legacyName.isBlank()) {
+                throw new IllegalArgumentException(
+                        "Enter either an internal guarantor Employee ID or a legacy guarantor name");
+            }
+        } else if (legacyName != null && !legacyName.isBlank()) {
+            legacyName = legacyName.trim();
+            if (legacyName.length() > 200) {
+                throw new IllegalArgumentException("Legacy guarantor name cannot exceed 200 characters");
+            }
+        } else {
+            legacyName = null;
+        }
+
+        target.setGuarantorEmployee(guarantor);
+        target.setLegacyGuarantorName(legacyName);
     }
 }

@@ -1,0 +1,1562 @@
+
+<!DOCTYPE html>
+<!--
+    ========================================================================
+    PAGE:    Contribution & Share Management (Admin)
+    ENGINE:  Thymeleaf (th:*) + Spring Security (sec:*) + Bootstrap 5
+
+    HOW THIS PAGE WORKS (quick guide):
+      - ONE page, MANY tabs. The controller sends a variable called "tab".
+      - Each <section th:if="${tab == '...'}"> is shown only when that tab
+        is selected:  monthly-records | overview | shares | contributions |
+                      payments | statement
+      - Yearly Records and Statements use dedicated reporting fragments.
+      - Tabs are normal links (GET requests), so each click reloads the page
+        with ?tab=xxx in the URL.
+
+    DEVELOPER FILE MAP:
+      - dashboard.css: shared shell, sidebar, topbar and footer.
+      - admin-employees.css: shared admin form and table components.
+      - contribution-share.css: workspace components; cs-sm-* styles the
+        single-month view and cs-mr-* styles the monthly register.
+      - dashboard.js: responsive sidebar and shared navigation behavior.
+      - contribution-workspace.js: report/export guards, live table search,
+        transaction confirmation, duplicate-submit protection and form reset.
+      - Inline scripts at the bottom: share value/monthly-total previews,
+        effective-date previews, duplicate-category warning and date validation.
+      - Keep element IDs and data-cs-* hooks aligned with those scripts.
+      - GET forms select/filter data; POST forms submit changes to the server.
+        Thymeleaf and Spring Security remain responsible for server validation
+        and CSRF handling.
+
+    TAB MAP (numbers follow the navigation order, not source order):
+      1. Overview       2. Shares          3. Contributions
+      4. Payments       5. Monthly Records 6. Yearly Records
+      7. Statements
+      Monthly Records is the first content section in this file.
+      Yearly Records has a navigation link only; no content panel exists yet.
+
+    THYMELEAF CHEAT SHEET:
+      th:href    -> builds a link          th:action -> builds a form URL
+      th:text    -> replaces the text      th:value  -> sets an input value
+      th:if      -> show element only if the condition is true
+      th:unless  -> show element only if the condition is false
+      th:each    -> repeat the element for every item in a list
+      th:classappend -> add a CSS class when a condition is true
+      th:attr    -> set any HTML attribute dynamically
+      ${...}     -> a variable sent by the controller
+      @{...}     -> a URL      |...| -> text with variables inside
+    ========================================================================
+-->
+<html
+    lang="en"
+    xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico" th:href="@{/images/favicon.ico}">
+    <meta charset="UTF-8">
+
+    <!-- Ask search engines NOT to index this private admin page -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contribution &amp; Share Management | FundAxis</title>
+
+    <!-- Bootstrap CSS + Bootstrap Icons (loaded from CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- Project CSS files (served from /static/css) -->
+    <link th:href="@{/css/dashboard.css}" rel="stylesheet">
+    <link th:if="${tab == 'yearly-records'}" th:href="@{/css/yearly-records.css}" rel="stylesheet">
+    <link th:if="${tab == 'statement'}" th:href="@{/css/statements.css}" rel="stylesheet">
+    <link th:href="@{/css/admin-employees.css}" rel="stylesheet">
+    <link th:href="@{/css/contribution-share.css}" rel="stylesheet">
+    <link th:if="${tab == 'member-operations'}" th:href="@{/css/member-fund-operations.css}" rel="stylesheet">
+</head>
+<body class="fa-body" th:classappend="${tab == 'statement' and statementReport != null} ? 'cs-st-print-mode'">
+
+    <!-- Accessibility: lets keyboard users jump straight to the main content -->
+    <a class="fa-skip-link" href="#main-content">Skip to main content</a>
+
+    <!-- Whole page layout: sidebar on the left + main area on the right -->
+    <div class="fa-shell">
+
+        <!-- ================================================================
+             SIDEBAR NAVIGATION
+             (COMMON SHELL - keep identical on all admin pages)
+        ================================================================= -->
+        <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">
+
+            <!-- Brand / logo area -->
+            <div class="fa-sidebar-brand">
+                <a
+                    th:href="@{/admin/dashboard}"
+                    class="fa-brand-link"
+                    aria-label="FundAxis Admin dashboard home">
+                    <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">
+                    <span class="fa-brand-text">FundAxis</span>
+                </a>
+
+                <!-- Close button (visible on mobile only) -->
+                <button
+                    type="button"
+                    class="fa-sidebar-close"
+                    id="faSidebarClose"
+                    aria-label="Close navigation menu"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            </div>
+            <nav class="fa-sidebar-nav">
+
+                <!-- Dashboard -->
+                <p class="fa-nav-heading">Dashboard</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/dashboard}" class="fa-nav-link"><i class="bi bi-speedometer2" aria-hidden="true"></i> <span>Dashboard</span></a>
+                    </li>
+                </ul>
+
+                <!-- Employee and Fund Management -->
+                <p class="fa-nav-heading">Employee &amp; Fund</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/employees}" class="fa-nav-link"><i class="bi bi-people" aria-hidden="true"></i> <span>Employee Management</span></a>
+                    </li>
+                    <li>
+
+                        <!-- "active" = this is the current page -->
+                        <a
+                            th:href="@{/admin/contribution-workspace}"
+                            class="fa-nav-link active"
+                            aria-current="page"><i class="bi bi-piggy-bank" aria-hidden="true"></i> <span>Contributions</span></a>
+                    </li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>
+                </ul>
+
+                <!-- Loan Management -->
+                <p class="fa-nav-heading">Loan Management</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/loans}" class="fa-nav-link"><i class="bi bi-cash-coin" aria-hidden="true"></i> <span>Loans</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i> <span>Loan Extensions</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/disbursements}" class="fa-nav-link"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> <span>Loan Disbursements</span></a>
+                    </li>
+                </ul>
+
+                <!-- Repayment Management -->
+                <p class="fa-nav-heading">Repayment Management</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/repayment-schedules}" class="fa-nav-link"><i class="bi bi-calendar-check" aria-hidden="true"></i> <span>Repayment Schedules</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/repayments}" class="fa-nav-link"><i class="bi bi-receipt" aria-hidden="true"></i> <span>Repayments</span></a>
+                    </li>
+                </ul>
+
+                <!-- Security and Access -->
+                <p class="fa-nav-heading">Security &amp; Access</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/admin/user-accounts}" class="fa-nav-link"><i class="bi bi-person-gear" aria-hidden="true"></i> <span>User Accounts</span></a>
+                    </li>
+                    <li>
+                        <a th:href="@{/admin/roles}" class="fa-nav-link"><i class="bi bi-shield-lock" aria-hidden="true"></i> <span>Role Management</span></a>
+                    </li>
+                </ul>
+
+                <!-- Account and Security -->
+                <p class="fa-nav-heading">Account &amp; Security</p>
+                <ul class="fa-nav-list">
+                    <li>
+                        <a th:href="@{/change-password}" class="fa-nav-link"><i class="bi bi-key-fill" aria-hidden="true"></i> <span>Change Password</span></a>
+                    </li>
+                    <li>
+
+                        <!-- FundAxis logout form (sidebar). Logout must be POST (CSRF-safe) -->
+                        <form th:action="@{/logout}" method="post" class="fa-logout-form">
+                            <button type="submit" class="fa-nav-link fa-nav-button"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> <span>Sign Out</span></button>
+                        </form>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Dark overlay behind the sidebar on mobile (controlled by dashboard.js) -->
+        <div class="fa-overlay" id="faOverlay" hidden>
+        </div>
+
+        <!-- Right side: topbar + page content + footer -->
+        <div class="fa-main-wrap">
+
+            <!-- ============================================================
+                 TOP BAR
+                 (COMMON SHELL - keep identical on all admin pages)
+            ============================================================= -->
+            <header class="fa-topbar">
+
+                <!-- Left side: mobile menu button + title -->
+                <div class="fa-topbar-left">
+                    <button
+                        type="button"
+                        class="fa-menu-toggle"
+                        id="faMenuToggle"
+                        aria-label="Open navigation menu"
+                        aria-controls="faSidebar"
+                        aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i></button>
+                    <span class="fa-topbar-title">FundAxis <span class="fa-topbar-sub d-none d-md-inline">Employee Fund Management</span></span>
+                </div>
+
+                <!-- Right side: notifications + profile dropdown -->
+                <div class="fa-topbar-right">
+
+                    <!-- Notification placeholder (no function yet) -->
+                    <button type="button" class="fa-icon-btn" aria-label="Notifications (none)"><i class="bi bi-bell" aria-hidden="true"></i></button>
+
+                    <!-- Profile dropdown (Bootstrap dropdown) -->
+                    <div class="dropdown">
+                        <button
+                            class="fa-profile-btn dropdown-toggle"
+                            type="button"
+                            id="faProfileMenu"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            <span class="fa-avatar" aria-hidden="true"><i class="bi bi-person-fill"></i></span>
+                            <span class="fa-profile-meta d-none d-sm-flex">
+
+                                <!-- sec:authentication="name" = logged-in username from Spring Security -->
+                                <span class="fa-profile-name" sec:authentication="name">username</span>
+                                <span class="fa-role-badge fa-role-admin">ADMIN</span>
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end fa-dropdown" aria-labelledby="faProfileMenu">
+                            <li class="fa-dropdown-header">
+                                <span class="fa-profile-name" sec:authentication="name">username</span>
+                                <span class="fa-role-badge fa-role-admin">ADMIN</span>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item" th:href="@{/profile}"><i class="bi bi-person-badge" aria-hidden="true"></i> My Profile</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" th:href="@{/change-password}"><i class="bi bi-key" aria-hidden="true"></i> Change Password</a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+
+                                <!-- FundAxis logout form (profile dropdown) -->
+                                <form th:action="@{/logout}" method="post">
+                                    <button type="submit" class="dropdown-item fa-dropdown-danger"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign Out</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ============================================================
+                 MAIN WORKSPACE
+            ============================================================= -->
+            <main class="fa-content cs-workspace" id="main-content" tabindex="-1">
+
+                <!-- ========================================================
+                     A. PAGE HEADER + BREADCRUMB
+                ========================================================= -->
+                <div class="cs-page-header">
+                    <div>
+                        <nav aria-label="Breadcrumb">
+                            <ol class="breadcrumb fa-breadcrumb">
+                                <li class="breadcrumb-item">
+                                    <a th:href="@{/home}">Home</a>
+                                </li>
+                                <li class="breadcrumb-item">
+                                    <a th:href="@{/admin/dashboard}">Dashboard</a>
+                                </li>
+                                <li class="breadcrumb-item active" aria-current="page">
+                                    Contribution
+                                    &amp;
+                                    Share Management
+                                </li>
+                            </ol>
+                        </nav>
+                        <h1 class="cs-page-title">Contribution &amp; Share Management</h1>
+                        <p class="cs-page-subtitle">Manage member shares, monthly dues, collections &amp; statements.</p>
+                    </div>
+
+                    <!-- Header action: open the "new contribution" page -->
+                    <div class="cs-page-actions" th:unless="${tab == 'member-operations'}">
+                        <a class="cs-btn cs-btn-primary" th:href="@{/admin/contributions/new}"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Contribution</a>
+                    </div>
+                </div>
+
+                <!-- ========================================================
+                     B. FLASH NOTIFICATIONS
+                     Each box appears only if the controller sent that message
+                     (successMessage / errorMessage / warningMessage / infoMessage)
+                ========================================================= -->
+                <div class="fa-alerts" aria-live="polite">
+
+                    <!-- Success message -->
+                    <div
+                        th:if="${successMessage}"
+                        class="alert alert-success alert-dismissible fade show"
+                        role="status">
+                        <span th:text="${successMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+                    </div>
+
+                    <!-- Error message -->
+                    <div
+                        th:if="${errorMessage}"
+                        class="alert alert-danger alert-dismissible fade show"
+                        role="alert">
+                        <span th:text="${errorMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+                    </div>
+
+                    <!-- Warning message -->
+                    <div
+                        th:if="${warningMessage}"
+                        class="alert alert-warning alert-dismissible fade show"
+                        role="status">
+                        <span th:text="${warningMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+                    </div>
+
+                    <!-- Info message -->
+                    <div
+                        th:if="${infoMessage}"
+                        class="alert alert-info alert-dismissible fade show"
+                        role="status">
+                        <span th:text="${infoMessage}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+                    </div>
+                </div>
+
+                <!-- ========================================================
+                     C. SECTION TABS - server-rendered GET navigation.
+                     The active tab gets the class "is-active" when ${tab}
+                     matches its name.
+                ========================================================= -->
+                <nav class="cs-tabs" aria-label="Contribution workspace sections">
+
+                    <!-- ========== TAB 1: OVERVIEW - NAVIGATION ========== -->
+                    <a
+                        class="cs-tab text-decoration-none"
+                        th:classappend="${tab == 'overview'} ? 'is-active'"
+                        th:attr="aria-current=${tab == 'overview'} ? 'page'"
+                        th:href="@{/admin/contribution-workspace(tab='overview',year=${year},month=${month})}"><i class="bi bi-grid" aria-hidden="true"></i> Overview</a>
+
+                    <a class="cs-tab text-decoration-none" th:classappend="${tab == 'member-operations'} ? 'is-active'" th:attr="aria-current=${tab == 'member-operations'} ? 'page'" th:href="@{/admin/contribution-workspace(tab='member-operations',employeeId=${employeeId},year=${year},month=${month})}"><i class="bi bi-person-workspace" aria-hidden="true"></i> Member Fund Operations</a>
+
+                    <a
+                        class="cs-tab text-decoration-none"
+                        th:classappend="${tab == 'monthly-records'} ? 'is-active'"
+                        th:attr="aria-current=${tab == 'monthly-records'} ? 'page'"
+                        th:href="@{/admin/contribution-workspace(tab='monthly-records',view='single',year=${year},month=${month})}"><i class="bi bi-calendar-month" aria-hidden="true"></i> Monthly Records</a>
+
+                    <!-- ========== TAB 6: YEARLY RECORDS - NAVIGATION ========== -->
+
+                    <!-- Yearly Records uses its dedicated reporting fragment. -->
+
+                    <!-- Yearly Records uses its dedicated reporting fragment. -->
+                    <a
+                        class="cs-tab text-decoration-none"
+                        th:classappend="${tab == 'yearly-records'} ? 'is-active'"
+                        th:attr="aria-current=${tab == 'yearly-records'} ? 'page'"
+                        th:href="@{/admin/contribution-workspace(tab='yearly-records',year=${year})}"><i class="bi bi-calendar-range" aria-hidden="true"></i> Yearly Records</a>
+
+                    <!-- ========== TAB 7: STATEMENTS - NAVIGATION ========== -->
+                    <a
+                        class="cs-tab text-decoration-none"
+                        th:classappend="${tab == 'statement'} ? 'is-active'"
+                        th:attr="aria-current=${tab == 'statement'} ? 'page'"
+                        th:href="@{/admin/contribution-workspace(tab='statement',employeeId=${employeeId},year=${year},month=${month})}"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Statements</a>
+                </nav>
+
+                <!-- ========== TAB 5: MONTHLY RECORDS ========== -->
+
+                <!-- Shown when ?tab=monthly-records. Has two sub-views: single | register -->
+                <section
+                    th:if="${tab == 'monthly-records'}"
+                    class="cs-tab-panel"
+                    aria-label="Monthly Contribution Records">
+
+                    <!-- Monthly records header card -->
+                    <div class="cs-card mb-4">
+                        <h4 class="mb-2"><i class="bi bi-calendar-month me-2"></i> Monthly Contribution Records</h4>
+                        <p class="text-muted mb-0">View employee contributions for a single month or review multiple months in the contribution register.</p>
+                    </div>
+
+                    <!-- Sub-tab buttons. The selected one is green (btn-success),
+                    the other is outlined. ${monthlyView} decides which. -->
+                    <div
+                        class="d-flex flex-wrap gap-2 mb-4"
+                        role="navigation"
+                        aria-label="Monthly Records Views">
+
+                        <!-- Single Month Records button -->
+                        <a
+                            class="btn"
+                            th:classappend="${monthlyView == 'single'} ? 'btn-success' : 'btn-outline-success'"
+                            th:href="@{/admin/contribution-workspace(tab='monthly-records',view='single',year=${year},month=${month})}"><i class="bi bi-calendar-date me-1"></i> Single Month Records</a>
+
+                        <!-- Monthly Contribution Register button -->
+                        <a
+                            class="btn"
+                            th:classappend="${monthlyView == 'register'} ? 'btn-success' : 'btn-outline-success'"
+                            th:href="@{/admin/contribution-workspace(tab='monthly-records',view='register',year=${year},month=${month})}"><i class="bi bi-table me-1"></i> Monthly Contribution Register</a>
+                    </div>
+
+                    <!-- ====================================================
+                         SUB-TAB 1: SINGLE MONTH RECORDS
+                         Shown when ${monthlyView} == 'single'
+                    ===================================================== -->
+                    <div th:if="${monthlyView == 'single'}" class="cs-single-month">
+
+                        <!-- Toolbar: heading + Excel download for the selected month -->
+                        <div class="cs-sm-toolbar">
+                            <div>
+                                <h5 class="cs-sm-heading"><i class="bi bi-calendar-check me-2"></i>Single Month Contribution Records</h5>
+                                <p class="cs-sm-subheading">Monthly financial position, employee by employee.</p>
+                            </div>
+                            <a
+                                class="cs-sm-export"
+                                th:href="@{/admin/contribution-workspace/single-month/export(year=${year},month=${month})}"
+                                title="Download all records for the selected contribution month"><i class="bi bi-file-earmark-excel"></i> Download Month Excel</a>
+                        </div>
+
+                        <!-- FILTERS: year, month, search, status (GET parameters preserved) -->
+                        <form class="cs-sm-filters" method="get" th:action="@{/admin/contribution-workspace}">
+
+                            <!-- Hidden fields keep the user on this tab/view and reset paging -->
+                            <input type="hidden" name="tab" value="monthly-records">
+                            <input type="hidden" name="view" value="single">
+                            <input type="hidden" name="page" value="0">
+                            <input type="hidden" name="size" value="10">
+
+                            <!-- Year -->
+                            <div class="cs-sm-field cs-sm-year">
+                                <label for="smYear">Year</label>
+                                <input
+                                    id="smYear"
+                                    name="year"
+                                    type="number"
+                                    min="1900"
+                                    max="9999"
+                                    th:value="${year}"
+                                    required>
+                            </div>
+
+                            <!-- Month (1-12, shown as full English month name) -->
+                            <div class="cs-sm-field cs-sm-month">
+                                <label for="smMonth">Month</label>
+                                <select id="smMonth" name="month" required>
+                                    <option
+                                        th:each="m : ${#numbers.sequence(1,12)}"
+                                        th:value="${m}"
+                                        th:text="${T(java.time.Month).of(m).getDisplayName(T(java.time.format.TextStyle).FULL, T(java.util.Locale).ENGLISH)}"
+                                        th:selected="${m == month}">Month</option>
+                                </select>
+                            </div>
+
+                            <!-- Search by employee ID or name -->
+                            <div class="cs-sm-field cs-sm-search">
+                                <label for="smSearch">Employee ID or Name</label>
+                                <input
+                                    id="smSearch"
+                                    name="search"
+                                    type="search"
+                                    placeholder="Search employee..."
+                                    th:value="${search}">
+                            </div>
+
+                            <!-- Payment status filter -->
+                            <div class="cs-sm-field cs-sm-status">
+                                <label for="smStatus">Payment Status</label>
+                                <select id="smStatus" name="status">
+                                    <option value="ALL" th:selected="${status == null or status == 'ALL'}">All Statuses</option>
+                                    <option value="PAID" th:selected="${status == 'PAID'}">PAID</option>
+                                    <option value="PENDING" th:selected="${status == 'PENDING'}">PENDING</option>
+                                    <option value="CANCELED" th:selected="${status == 'CANCELED'}">CANCELED</option>
+                                </select>
+                            </div>
+
+                            <!-- Submit + Clear buttons -->
+                            <div class="cs-sm-filter-actions">
+                                <button type="submit" class="cs-sm-search-btn"><i class="bi bi-search"></i> View Records</button>
+                                <a
+                                    class="cs-sm-reset"
+                                    th:href="@{/admin/contribution-workspace(tab='monthly-records',view='single',year=${year},month=${month})}"
+                                    aria-label="Clear search and status filters">Clear</a>
+                            </div>
+                        </form>
+
+                        <!-- SUMMARY BEFORE TABLE
+                        Totals cover the FULL month, not just the current page -->
+                        <section
+                            class="cs-sm-summary"
+                            th:if="${monthlySummary != null}"
+                            aria-label="Monthly financial summary">
+
+                            <!-- Summary heading + Paid/Pending/Canceled count pills -->
+                            <div class="cs-sm-summary-head">
+                                <div>
+                                    <h6><i class="bi bi-graph-up-arrow me-2"></i>Financial Overview <span th:text="${T(java.time.Month).of(month).getDisplayName(T(java.time.format.TextStyle).FULL, T(java.util.Locale).ENGLISH) + ' ' + year}">November 2026</span></h6>
+                                    <small>All contribution records in the selected month</small>
+                                </div>
+                                <div class="cs-sm-pills">
+                                    <span class="cs-sm-pill cs-sm-paid" th:text="|Paid ${monthlySummary.paidCount}|">Paid 0</span>
+                                    <span
+                                        class="cs-sm-pill cs-sm-pending"
+                                        th:text="|Pending ${monthlySummary.pendingCount}|">Pending 0</span>
+                                    <span
+                                        class="cs-sm-pill cs-sm-canceled"
+                                        th:text="|Canceled ${monthlySummary.canceledCount}|">Canceled 0</span>
+                                </div>
+                            </div>
+
+                            <!-- Six metric boxes -->
+                            <div class="cs-sm-summary-grid">
+                                <div class="cs-sm-metric">
+                                    <span>Contribution Records</span>
+                                    <strong th:text="${monthlySummary.totalMembers}">0</strong>
+                                </div>
+                                <div class="cs-sm-metric">
+                                    <span>Monthly Due <small>(BDT)</small></span>
+                                    <strong
+                                        th:text="${#numbers.formatDecimal(monthlySummary.totalDue,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                                <div class="cs-sm-metric">
+                                    <span>Direct Payments <small>(BDT)</small></span>
+                                    <strong
+                                        class="cs-sm-green"
+                                        th:text="${#numbers.formatDecimal(monthlySummary.totalCash,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                                <div class="cs-sm-metric">
+                                    <span>Credit Applied <small>(BDT)</small></span>
+                                    <strong
+                                        th:text="${#numbers.formatDecimal(monthlySummary.totalCredit,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                                <div class="cs-sm-metric">
+                                    <span>Total Settled <small>(BDT)</small></span>
+                                    <strong
+                                        class="cs-sm-green"
+                                        th:text="${#numbers.formatDecimal(monthlySummary.totalSettled,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                                <div class="cs-sm-metric">
+                                    <span>Outstanding <small>(BDT)</small></span>
+                                    <strong
+                                        class="cs-sm-red"
+                                        th:text="${#numbers.formatDecimal(monthlySummary.totalRemaining,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                            </div>
+
+                            <!-- Settlement rate = Total Settled / Total Due × 100 -->
+                            <div
+                                class="cs-sm-summary-footer"
+                                th:with="settlementPercentage=${monthlySummary.totalDue.signum() == 0
+                                    ? 0.0
+                                    : (monthlySummary.totalSettled.doubleValue()
+                                    / monthlySummary.totalDue.doubleValue()) * 100.0}">
+                                <span>Settlement rate</span>
+                                <strong
+                                    th:text="${#numbers.formatDecimal(
+                                        settlementPercentage, 1, 'COMMA', 2, 'POINT'
+                                        ) + '%'}">0.00%</strong>
+
+                                <!-- Progress bar -->
+                                <div
+                                    class="cs-sm-progress"
+                                    role="progressbar"
+                                    aria-label="Monthly settlement rate"
+                                    th:attr="aria-valuenow=${settlementPercentage > 100 ? 100 : settlementPercentage}"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100">
+                                    <span
+                                        th:style="|width: ${settlementPercentage > 100 ? 100 : settlementPercentage}%|"></span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- EMPLOYEE RECORDS TABLE (one row per contribution record) -->
+                        <section class="cs-sm-record-card" aria-label="Employee monthly contribution records">
+                            <div class="cs-sm-record-head">
+                                <h6><i class="bi bi-people me-2"></i>Employee Contribution Register</h6>
+                                <span th:text="|${totalElements == null ? 0 : totalElements} matching record(s)|">0 matching records</span>
+                            </div>
+                            <div class="cs-sm-table-wrap">
+                                <table class="cs-sm-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Employee / Month</th>
+                                            <th scope="col" class="cs-sm-num">Monthly Due</th>
+                                            <th scope="col" class="cs-sm-num">Cash Received</th>
+                                            <th scope="col" class="cs-sm-num">Credit Used</th>
+                                            <th scope="col" class="cs-sm-num">Total Settled</th>
+                                            <th scope="col" class="cs-sm-num">Outstanding</th>
+                                            <th scope="col">Status</th>
+                                            <th scope="col">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+
+                                        <!-- "r" = one monthly record. Canceled rows get a muted style -->
+                                        <tr
+                                            th:each="r : ${monthlyRecords}"
+                                            th:classappend="${r.paymentStatus == 'CANCELED'} ? 'cs-sm-muted-row'">
+                                            <td>
+                                                <div class="fw-semibold" th:text="${r.employeeId}">EMP-23</div>
+                                                <div th:text="${r.employeeFullName}">Employee Name</div>
+                                                <small class="text-muted" th:text="${#temporals.format(selectedMonth, 'MMM yyyy')}">Nov 2026</small>
+                                            </td>
+                                            <td
+                                                class="cs-sm-num"
+                                                th:text="${#numbers.formatDecimal(r.monthlyDue,1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-sm-num"
+                                                th:text="${#numbers.formatDecimal(r.cashReceived,1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-sm-num"
+                                                th:text="${#numbers.formatDecimal(r.memberCreditApplied,1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-sm-num cs-sm-settled"
+                                                th:text="${#numbers.formatDecimal(r.totalPaid,1,'COMMA',2,'POINT')}">0.00</td>
+
+                                            <!-- Outstanding: highlighted when greater than zero -->
+                                            <td
+                                                class="cs-sm-num"
+                                                th:classappend="${r.remainingDue.signum() > 0} ? 'cs-sm-owing'"
+                                                th:text="${#numbers.formatDecimal(r.remainingDue,1,'COMMA',2,'POINT')}">0.00</td>
+
+                                            <!-- Status badge: PAID / PENDING / CANCELED -->
+                                            <td>
+                                                <span
+                                                    class="cs-status"
+                                                    th:classappend="${r.paymentStatus == 'PAID'} ? 'cs-status-paid' : (${r.paymentStatus == 'PENDING'} ? 'cs-status-pending' : 'cs-status-canceled')"
+                                                    th:text="${r.paymentStatus}">PENDING</span>
+                                            </td>
+
+                                            <!-- Opens the details modal that matches this record's contributionId -->
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    class="cs-sm-detail-btn"
+                                                    data-bs-toggle="modal"
+                                                    th:attr="data-bs-target=${'#smDetails-' + r.contributionId}"
+                                                    aria-label="View employee contribution details"><i class="bi bi-eye"></i> Details</button>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Empty-state row (no records matched the filters) -->
+                                        <tr th:if="${monthlyRecords == null or #lists.isEmpty(monthlyRecords)}">
+                                            <td colspan="8" class="cs-sm-empty"><i class="bi bi-inbox me-2"></i>No contribution records found for the selected filters.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- PAGINATION: 10 records per page; controller paging parameters preserved -->
+                            <div class="cs-sm-pagination" th:if="${totalElements != null}">
+
+                                <!-- "Showing X-Y of Z" text -->
+                                <span>Showing <strong th:text="${totalElements == 0 ? 0 : currentPage * pageSize + 1}">0</strong>&ndash;<strong th:text="${T(java.lang.Math).min((currentPage + 1) * pageSize,totalElements)}">0</strong> of <strong th:text="${totalElements}">0</strong></span>
+
+                                <!-- Page links (only when there is more than one page) -->
+                                <nav aria-label="Monthly records pages" th:if="${totalPages > 1}">
+                                    <ul class="pagination pagination-sm mb-0">
+
+                                        <!-- Previous page -->
+                                        <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                                            <a
+                                                class="page-link"
+                                                th:href="@{/admin/contribution-workspace(tab='monthly-records',view='single',year=${year},month=${month},search=${search},status=${status},page=${currentPage - 1},size=10,sortBy=${sortBy},sortDir=${sortDir})}">Previous</a>
+                                        </li>
+
+                                        <!-- Page numbers (current page +/- 2 only) -->
+                                        <li
+                                            class="page-item"
+                                            th:each="p : ${#numbers.sequence(0,totalPages - 1)}"
+                                            th:if="${p >= currentPage - 2 and p <= currentPage + 2}"
+                                            th:classappend="${p == currentPage} ? 'active'">
+                                            <a
+                                                class="page-link"
+                                                th:href="@{/admin/contribution-workspace(tab='monthly-records',view='single',year=${year},month=${month},search=${search},status=${status},page=${p},size=10,sortBy=${sortBy},sortDir=${sortDir})}"
+                                                th:text="${p+1}">1</a>
+                                        </li>
+
+                                        <!-- Next page -->
+                                        <li
+                                            class="page-item"
+                                            th:classappend="${currentPage >= totalPages - 1} ? 'disabled'">
+                                            <a
+                                                class="page-link"
+                                                th:href="@{/admin/contribution-workspace(tab='monthly-records',view='single',year=${year},month=${month},search=${search},status=${status},page=${currentPage + 1},size=10,sortBy=${sortBy},sortDir=${sortDir})}">Next</a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </section>
+
+                        <!-- DETAILS MODALS: one per record. Uses existing fields only.
+                        Historical rate/valuation are nullable in the current DTO. -->
+                        <div
+                            th:each="r : ${monthlyRecords}"
+                            class="modal fade cs-sm-modal"
+                            th:id="${'smDetails-' + r.contributionId}"
+                            tabindex="-1"
+                            aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                <div class="modal-content">
+
+                                    <!-- Modal header: title + employee ID and name -->
+                                    <div class="modal-header">
+                                        <div>
+                                            <h5 class="modal-title">Monthly Contribution Details</h5>
+                                            <small th:text="|${r.employeeId} ${r.employeeFullName}|">Employee</small>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="btn-close"
+                                            data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <!-- Part 1: employee and share information -->
+                                        <h6 class="cs-sm-modal-label">Employee &amp; Share Information</h6>
+                                        <dl class="cs-sm-detail-grid">
+                                            <div>
+                                                <dt>Employee ID</dt>
+                                                <dd th:text="${r.employeeId}">—</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Name</dt>
+                                                <dd th:text="${r.employeeFullName}">—</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Designation</dt>
+                                                <dd th:text="${r.designation}">—</dd>
+                                            </div>
+                                            <div>
+                                                <dt>OLD Shares</dt>
+                                                <dd th:text="${r.oldShares}">0</dd>
+                                            </div>
+                                            <div>
+                                                <dt>NEW Shares</dt>
+                                                <dd th:text="${r.newShares}">0</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Total Shares</dt>
+                                                <dd th:text="${r.totalShares}">0</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Monthly Rate per Share</dt>
+                                                <dd
+                                                    th:text="${r.monthlyRatePerShare == null ? 'Not available (mixed category rates possible)' : #numbers.formatDecimal(r.monthlyRatePerShare,1,'COMMA',2,'POINT') + ' BDT'}">—</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Total Share Value</dt>
+                                                <dd
+                                                    th:text="${r.totalShareValue == null ? 'Historical valuation not available' : #numbers.formatDecimal(r.totalShareValue,1,'COMMA',2,'POINT') + ' BDT'}">—</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Recorded Contribution Share Value</dt>
+                                                <dd th:text="${r.contributionShareValue == null ? '—' : #numbers.formatDecimal(r.contributionShareValue,1,'COMMA',2,'POINT') + ' BDT'}">—</dd>
+                                            </div>
+                                        </dl>
+
+                                        <!-- Part 2: monthly settlement -->
+                                        <h6 class="cs-sm-modal-label">Monthly Settlement</h6>
+                                        <dl class="cs-sm-detail-grid">
+                                            <div>
+                                                <dt>Monthly Due (BDT)</dt>
+                                                <dd
+                                                    th:text="${#numbers.formatDecimal(r.monthlyDue,1,'COMMA',2,'POINT')}">0.00</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Direct Payment (BDT)</dt>
+                                                <dd
+                                                    th:text="${#numbers.formatDecimal(r.cashReceived,1,'COMMA',2,'POINT')}">0.00</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Member Credit Applied (BDT)</dt>
+                                                <dd
+                                                    th:text="${#numbers.formatDecimal(r.memberCreditApplied,1,'COMMA',2,'POINT')}">0.00</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Total Settled (BDT)</dt>
+                                                <dd
+                                                    th:text="${#numbers.formatDecimal(r.totalPaid,1,'COMMA',2,'POINT')}">0.00</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Outstanding (BDT)</dt>
+                                                <dd
+                                                    th:text="${#numbers.formatDecimal(r.remainingDue,1,'COMMA',2,'POINT')}">0.00</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Status</dt>
+                                                <dd th:text="${r.paymentStatus}">—</dd>
+                                            </div>
+                                            <div class="cs-sm-detail-full">
+                                                <dt>Remarks</dt>
+                                                <dd th:text="${r.contributionRemarks == null or #strings.isEmpty(r.contributionRemarks) ? '—' : r.contributionRemarks}">—</dd>
+                                            </div>
+                                        </dl>
+                                    </div>
+
+                                    <!-- Modal footer: link to payment history + close button -->
+                                    <div class="modal-footer">
+                                        <a
+                                            class="cs-sm-payment-link"
+                                            th:href="@{/admin/contribution-workspace(tab='payments',contributionId=${r.contributionId},year=${year},month=${month})}"><i class="bi bi-receipt"></i> Payment History</a>
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ====================================================
+                         SUB-TAB 2: MONTHLY CONTRIBUTION REGISTER
+                         Shown when ${monthlyView} == 'register'
+                         (multi-month table: one column per month)
+                    ===================================================== -->
+
+                    <!-- MONTHLY RECORDS > MONTHLY CONTRIBUTION REGISTER ONLY -->
+                    <div th:if="${monthlyView == 'register'}" class="cs-monthly-register">
+                        <div class="cs-mr-toolbar">
+                            <div>
+                                <h5><i class="bi bi-table me-2"></i>Monthly Contribution Register</h5>
+                                <p>Employee-wise contribution settlements across the selected reporting period.</p>
+                            </div>
+                            <a
+                                class="cs-mr-export"
+                                th:href="@{/admin/contribution-workspace/monthly-register/export(
+                                    rangeFrom=${#temporals.format(registerStartMonth, 'yyyy-MM')},
+                                    rangeTo=${#temporals.format(registerEndMonth, 'yyyy-MM')},
+                                    search=${param.search != null ? param.search[0] : ''}
+                                    )}"><i class="bi bi-file-earmark-excel"></i> Download Register Excel</a>
+                        </div>
+                        <form class="cs-mr-filter" method="get" th:action="@{/admin/contribution-workspace}">
+                            <input type="hidden" name="tab" value="monthly-records">
+                            <input type="hidden" name="view" value="register">
+                            <div>
+                                <label for="mrFrom">From Month</label>
+                                <input
+                                    id="mrFrom"
+                                    name="rangeFrom"
+                                    type="month"
+                                    required
+                                    th:value="${#temporals.format(registerStartMonth,'yyyy-MM')}">
+                            </div>
+                            <div>
+                                <label for="mrTo">To Month</label>
+                                <input
+                                    id="mrTo"
+                                    name="rangeTo"
+                                    type="month"
+                                    required
+                                    th:value="${#temporals.format(registerEndMonth,'yyyy-MM')}">
+                            </div>
+                            <div class="cs-mr-search">
+                                <label for="mrEmployee">Employee ID or Name</label>
+                                <input
+                                    id="mrEmployee"
+                                    name="search"
+                                    type="text"
+                                    placeholder="Search employee..."
+                                    th:value="${param.search != null ? param.search[0] : ''}">
+                            </div>
+                            <div class="cs-mr-filter-actions">
+                                <button type="submit"><i class="bi bi-search me-1"></i> View Register</button>
+                                <a
+                                    th:href="@{/admin/contribution-workspace(tab='monthly-records',view='register',year=${year},month=${month})}">Clear</a>
+                            </div>
+                        </form>
+                        <div class="cs-mr-summary">
+                            <div class="cs-mr-summary-head">
+                                <div>
+                                    <h6><i class="bi bi-graph-up-arrow me-2"></i>Register Financial Overview</h6>
+                                    <small
+                                        th:text="${#temporals.format(registerStartMonth, 'MMM yyyy') + ' - ' + #temporals.format(registerEndMonth, 'MMM yyyy')}">Reporting period</small>
+                                </div>
+                                <span class="cs-mr-chip" th:text="|${registerTotalMembers} members|">0 members</span>
+                            </div>
+                            <div class="cs-mr-metrics">
+                                <div>
+                                    <span>Total Members</span>
+                                    <strong th:text="${registerTotalMembers}">0</strong>
+                                </div>
+                                <div>
+                                    <span>Total Contribution Due <small>(BDT)</small></span>
+                                    <strong th:text="${#numbers.formatDecimal(registerTotalDue,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                                <div>
+                                    <span>Total Settled <small>(BDT)</small></span>
+                                    <strong
+                                        class="cs-mr-positive"
+                                        th:text="${#numbers.formatDecimal(registerTotalPaid,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                                <div>
+                                    <span>Total Outstanding <small>(BDT)</small></span>
+                                    <strong
+                                        class="cs-mr-negative"
+                                        th:text="${#numbers.formatDecimal(registerTotalOutstanding,1,'COMMA',2,'POINT')}">0.00</strong>
+                                </div>
+                                <div>
+                                    <span>OLD Shares</span>
+                                    <strong th:text="${registerTotalOldShares}">0</strong>
+                                </div>
+                                <div>
+                                    <span>NEW Shares</span>
+                                    <strong th:text="${registerTotalNewShares}">0</strong>
+                                </div>
+                            </div>
+                            <div
+                                class="cs-mr-rate"
+                                th:with="rate=${registerTotalDue.signum() == 0 ? 0.0 : (registerTotalPaid.doubleValue() / registerTotalDue.doubleValue()) * 100.0}">
+                                <span>Collection Rate</span>
+                                <strong th:text="${#numbers.formatDecimal(rate,1,'COMMA',2,'POINT') + '%'}">0.00%</strong>
+                                <div
+                                    class="cs-mr-progress"
+                                    role="progressbar"
+                                    aria-label="Register collection rate"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    th:attr="aria-valuenow=${rate > 100 ? 100 : (rate < 0 ? 0 : rate)}">
+                                    <span th:style="|width:${rate > 100 ? 100 : (rate < 0 ? 0 : rate)}%|"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="cs-mr-record-card">
+                            <div class="cs-mr-record-head">
+                                <div>
+                                    <h6><i class="bi bi-people me-2"></i>Employee Monthly Register</h6>
+                                    <p>Scroll horizontally to view all months. Employee columns stay visible.</p>
+                                </div>
+                                <span th:text="|${registerTotalMembers} matching records|">0 records</span>
+                            </div>
+                            <div
+                                class="cs-mr-table-wrap"
+                                tabindex="0"
+                                aria-label="Scrollable monthly contribution register">
+                                <table class="cs-mr-table">
+                                    <thead>
+                                        <tr>
+                                            <th>SL</th>
+                                            <th class="cs-mr-id">Employee ID</th>
+                                            <th class="cs-mr-name">Employee Name</th>
+                                            <th>Designation</th>
+                                            <th>OLD Shares</th>
+                                            <th>NEW Shares</th>
+                                            <th>Total Shares</th>
+                                            <th>Per Share (BDT)</th>
+                                            <th>Share Value (BDT)</th>
+                                            <th
+                                                th:each="m : ${registerMonths}"
+                                                th:text="${#temporals.format(m.atDay(1),'MMM yyyy')}">Month</th>
+                                            <th>Total Settled</th>
+                                            <th>Total Due</th>
+                                            <th>Outstanding</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="r : ${registerRecords}">
+                                            <td th:text="${r.slNo}">1</td>
+                                            <td class="cs-mr-id" th:text="${r.employeeId}">EMP-001</td>
+                                            <td class="cs-mr-name" th:text="${r.employeeName}">Employee Name</td>
+                                            <td th:text="${r.designation}">Designation</td>
+                                            <td class="cs-mr-num" th:text="${r.oldShares}">0</td>
+                                            <td class="cs-mr-num" th:text="${r.newShares}">0</td>
+                                            <td class="cs-mr-num cs-mr-bold" th:text="${r.oldShares + r.newShares}">0</td>
+                                            <td class="cs-mr-num cs-mr-na">N/A</td>
+                                            <td class="cs-mr-num cs-mr-na">N/A</td>
+                                            <td
+                                                class="cs-mr-num"
+                                                th:each="m : ${registerMonths}"
+                                                th:with="monthStatus=${r.monthlyStatuses.get(m)},
+                                                    amount=${r.monthlySettled.get(m)}"
+                                                th:classappend="${monthStatus == 'CANCELED'
+                                                    ? 'cs-mr-cancelled'
+                                                    : (monthStatus != 'NO_RECORD' and amount != null and amount.signum() > 0
+                                                    ? 'cs-mr-has-payment'
+                                                    : '')}"
+                                                th:text="${monthStatus == 'NO_RECORD' ? '—' : (monthStatus == 'CANCELED' ? 'Canceled' : #numbers.formatDecimal((amount == null ? 0 : amount), 1, 'COMMA', 2, 'POINT'))}"></td>
+                                            <td
+                                                class="cs-mr-num cs-mr-positive cs-mr-bold"
+                                                th:text="${#numbers.formatDecimal(r.totalSettled,1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-mr-num"
+                                                th:text="${#numbers.formatDecimal(r.totalDue,1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-mr-num cs-mr-bold"
+                                                th:classappend="${r.remainingDue.signum() > 0 ? 'cs-mr-owing' : ''}"
+                                                th:text="${#numbers.formatDecimal(r.remainingDue, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                                        </tr>
+                                        <tr th:if="${registerRecords == null or #lists.isEmpty(registerRecords)}">
+                                            <td
+                                                class="cs-mr-empty"
+                                                th:colspan="${12 + #lists.size(registerMonths)}"><i class="bi bi-inbox"></i> No contribution records found for the selected period.</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="cs-mr-grand-total">
+                                        <tr>
+                                            <td colspan="4" class="cs-mr-total-label">GRAND TOTAL</td>
+                                            <td class="cs-mr-num" th:text="${registerTotalOldShares}">0</td>
+                                            <td class="cs-mr-num" th:text="${registerTotalNewShares}">0</td>
+                                            <td class="cs-mr-num" th:text="${registerTotalShares}">0</td>
+                                            <td class="cs-mr-num">N/A</td>
+                                            <td class="cs-mr-num">N/A</td>
+                                            <td
+                                                class="cs-mr-num"
+                                                th:each="m : ${registerMonths}"
+                                                th:text="${#numbers.formatDecimal(registerMonthTotals.get(m),1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-mr-num"
+                                                th:text="${#numbers.formatDecimal(registerTotalPaid,1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-mr-num"
+                                                th:text="${#numbers.formatDecimal(registerTotalDue,1,'COMMA',2,'POINT')}">0.00</td>
+                                            <td
+                                                class="cs-mr-num"
+                                                th:text="${#numbers.formatDecimal(registerTotalOutstanding,1,'COMMA',2,'POINT')}">0.00</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            <div class="cs-mr-table-footer">
+                                <span><i class="bi bi-info-circle me-1"></i> — No record &nbsp; | &nbsp; 0.00 Unpaid &nbsp; | &nbsp; Canceled Excluded</span>
+                                <span>All matching employees shown</span>
+                            </div>
+                        </div>
+                        <p class="cs-mr-note"><i class="bi bi-info-circle me-1"></i>Monthly values represent amounts settled against each contribution month, not bank cashflow. Reversed payments are excluded. Per-share rate and valuation remain N/A until verified.</p>
+                    </div>
+                </section>
+
+                <!-- ========== TAB 1: OVERVIEW ========== -->
+
+                <!--
+                     Shown when ?tab=overview
+                     Rolling 12-month summary + selected-month summary table
+                ========================================================= -->
+                <section th:if="${tab == 'overview'}" class="cs-tab-panel" aria-label="Overview">
+
+                    <!-- Period selector: choose the month the 12-month report ends on -->
+                    <div class="cs-card" style="margin-bottom:18px;">
+                        <div class="cs-card-body">
+                            <form
+                                method="get"
+                                th:action="@{/admin/contribution-workspace}"
+                                class="cs-export-fields">
+                                <input type="hidden" name="tab" value="overview">
+                                <input type="hidden" name="year" th:value="${year}">
+                                <input type="hidden" name="month" th:value="${month}">
+                                <div class="cs-form-group">
+                                    <label class="cs-form-label" for="overviewPeriod">Report through</label>
+
+                                    <!-- <input type="month"> gives a month picker; value format is yyyy-MM -->
+                                    <input
+                                        class="cs-form-control"
+                                        type="month"
+                                        name="period"
+                                        id="overviewPeriod"
+                                        style="max-width:230px;"
+                                        required
+                                        th:value="${#temporals.format(selectedMonth,'yyyy-MM')}">
+                                </div>
+                                <button class="cs-btn cs-btn-outline" type="submit"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh</button>
+                            </form>
+                            <p class="cs-form-help">Rolling 12 months ending <span th:text="${#temporals.format(selectedMonth,'MMM yyyy')}"></span>. Collections are attributed to contribution month, not payment receipt date.</p>
+                        </div>
+                    </div>
+
+                    <!-- Four statistic cards (shown only when ${dashboard} exists) -->
+                    <div class="cs-stats" th:if="${dashboard != null}">
+
+                        <!-- Net Expected -->
+                        <div class="cs-stat-card">
+                            <div class="cs-stat-icon">
+                                <i class="bi bi-calculator" aria-hidden="true"></i>
+                            </div>
+                            <div class="cs-stat-content">
+                                <p class="cs-stat-label">Net Expected (BDT)</p>
+                                <p class="cs-stat-value" th:text="${dashboard.expected}">0</p>
+                            </div>
+                        </div>
+
+                        <!-- Collected -->
+                        <div class="cs-stat-card">
+                            <div class="cs-stat-icon">
+                                <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                            </div>
+                            <div class="cs-stat-content">
+                                <p class="cs-stat-label">Collected (BDT)</p>
+                                <p class="cs-stat-value" th:text="${dashboard.collected}">0</p>
+                            </div>
+                        </div>
+
+                        <!-- Outstanding -->
+                        <div class="cs-stat-card">
+                            <div class="cs-stat-icon">
+                                <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                            </div>
+                            <div class="cs-stat-content">
+                                <p class="cs-stat-label">Outstanding (BDT)</p>
+                                <p class="cs-stat-value" th:text="${dashboard.outstanding}">0</p>
+                            </div>
+                        </div>
+
+                        <!-- Shares: OLD / NEW / Total (Total = OLD + NEW) -->
+                        <div class="cs-stat-card">
+                            <div class="cs-stat-icon">
+                                <i class="bi bi-pie-chart" aria-hidden="true"></i>
+                            </div>
+                            <div class="cs-stat-content">
+                                <p class="cs-stat-label">Current OLD / NEW / Total shares</p>
+                                <p
+                                    class="cs-stat-value"
+                                    th:text="|${dashboard.currentOldShares} / ${dashboard.currentNewShares} / ${dashboard.currentOldShares + dashboard.currentNewShares}|">0 / 0 / 0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message shown when there is no dashboard data -->
+                    <p class="cs-empty" th:if="${dashboard == null}">No dashboard data available for this period.</p>
+
+                    <!-- Selected month summary table (one row) -->
+                    <div class="cs-card" th:if="${monthly != null}">
+                        <div class="cs-card-header">
+                            <h2 class="cs-card-title">Selected month summary</h2>
+                            <span class="cs-muted" style="font-size:.8rem;" th:text="${monthly.month}"></span>
+                        </div>
+                        <div class="cs-table-wrap">
+                            <table class="cs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th class="cs-amount">Records</th>
+                                        <th class="cs-amount">Pending</th>
+                                        <th class="cs-amount">Paid</th>
+                                        <th class="cs-amount">Canceled</th>
+                                        <th class="cs-amount">Expected</th>
+                                        <th class="cs-amount">Collected</th>
+                                        <th class="cs-amount">Outstanding</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td th:text="${monthly.month}"></td>
+                                        <td class="cs-amount" th:text="${monthly.totalRecords}"></td>
+                                        <td class="cs-amount" th:text="${monthly.pendingRecords}"></td>
+                                        <td class="cs-amount" th:text="${monthly.paidRecords}"></td>
+                                        <td class="cs-amount" th:text="${monthly.canceledRecords}"></td>
+                                        <td class="cs-amount" th:text="${monthly.expected}"></td>
+                                        <td class="cs-amount" th:text="${monthly.collected}"></td>
+                                        <td class="cs-amount" th:text="${monthly.outstanding}"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Message shown when there is no monthly data -->
+                    <div class="cs-card" th:if="${monthly == null}">
+                        <p class="cs-empty">No dues recorded for this period.</p>
+                    </div>
+                </section>
+
+                <th:block th:if="${tab == 'member-operations'}"><section th:replace="~{admin/member-fund-operations :: memberFundOperationsPanel}"></section></th:block>
+
+                <th:block th:if="${tab == 'yearly-records'}"><section th:replace="~{admin/contribution-yearly-records :: panel}"></section></th:block>
+                <th:block th:if="${tab == 'statement'}"><section th:replace="~{admin/contribution-statements :: panel}"></section></th:block>
+
+                <!-- CONTEXT HELP (shown at the bottom of every tab) -->
+                <p class="cs-muted" style="font-size:.78rem;margin-top:8px;"><i class="bi bi-info-circle" aria-hidden="true"></i> Dues are calculated month-first using share quantity and rate effective on the 1st of the contribution month. Collected amounts exclude reversed payments. Expected dues are never treated as cash received.</p>
+            </main>
+
+            <!-- Page footer -->
+            <footer class="fa-footer">
+                <span>FundAxis &mdash; Employee Fund Management System</span>
+                <span>Authorized Internal Use Only</span>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ========================================================================
+         JAVASCRIPT FILES (loaded at the end so the page renders first)
+    ========================================================================= -->
+
+    <!-- Bootstrap JS (dropdowns, alerts, modals, etc.) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Common Admin Dashboard (sidebar open/close, shared behaviour) -->
+    <script th:src="@{/js/dashboard.js}"></script>
+    <script th:if="${tab == 'member-operations'}" th:src="@{/js/member-fund-operations.js}" defer></script>
+    <script th:if="${tab == 'yearly-records'}" th:src="@{/js/yearly-records.js}" defer></script>
+    <script th:if="${tab == 'statement'}" th:src="@{/js/statements.js}" defer></script>
+
+    <!-- ==================== TITLE: Calculate Total Share Value Automatically ==================== -->
+    <script>
+    // Wait until the HTML document has been fully loaded.
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // Get the input field for the number of shares.
+        const quantityInput = document.getElementById("allocateQuantity");
+
+        // Get the input field for the share value per share.
+        const shareValueInput = document.getElementById("allocateShareValue");
+
+        // Get the input field for the calculated total share value.
+        const totalValueInput = document.getElementById("allocateTotalShareValue");
+
+        // Stop execution if any required input field is missing.
+        if (!quantityInput || !shareValueInput || !totalValueInput) {
+            return;
+        }
+
+        // Define a function to calculate the total share value.
+        function calculateShareValue() {
+
+            // Get the number of shares as text and remove surrounding whitespace.
+            const quantityText = quantityInput.value.trim();
+
+            // Get the share value per share as text and remove surrounding whitespace.
+            const valueText = shareValueInput.value.trim();
+
+            // Clear the total if either input field is empty.
+            if (quantityText === "" || valueText === "") {
+                totalValueInput.value = "";
+                return;
+            }
+
+            // Convert the number of shares from text to a numeric value.
+            const quantity = Number(quantityText);
+
+            // Convert the share value per share from text to a numeric value.
+            const perShareValue = Number(valueText);
+
+            // Validate the quantity and share value before performing the calculation.
+            if (
+                // Ensure the quantity is a safe integer.
+                !Number.isSafeInteger(quantity) ||
+
+                // Ensure the quantity is greater than zero.
+                quantity <= 0 ||
+
+                // Ensure the share value is a finite number.
+                !Number.isFinite(perShareValue) ||
+
+                // Prevent negative share values.
+                perShareValue < 0 ||
+
+                // Allow only non-negative numbers with up to two decimal places.
+                !/^\d+(\.\d{1,2})?$/.test(valueText)
+            ) {
+                // Clear the total if either input contains an invalid value.
+                totalValueInput.value = "";
+                return;
+            }
+
+            // Calculate the total share value.
+            const total = quantity * perShareValue;
+
+            // Display the total with exactly two decimal places if the result is finite.
+            totalValueInput.value = Number.isFinite(total)
+                ? total.toFixed(2)
+                : "";
+        }
+
+        // Recalculate the total whenever the number of shares changes.
+        quantityInput.addEventListener("input", calculateShareValue);
+
+        // Recalculate the total whenever the share value per share changes.
+        shareValueInput.addEventListener("input", calculateShareValue);
+
+        // Calculate the total once when the page loads.
+        calculateShareValue();
+    });
+</script>
+
+    <!-- ==================== TITLE: Calculate Total Monthly Contribution For Employee Holdings ==================== -->
+    <script>
+    // Wait until the HTML document has been fully loaded.
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // Get the employee holdings table using its ID.
+        const table = document.getElementById("holdingsTable");
+
+        // Get the table cell where the total monthly contribution will be displayed.
+        const totalCell = document.getElementById("holdingsMonthlyTotal");
+
+        // Stop execution if the table or total cell does not exist.
+        if (!table || !totalCell || table.closest(".mfo-workspace")) {
+            return;
+        }
+
+        // Select all holding rows that have the cs-holding-row class.
+        // Convert the NodeList into an array for easier iteration.
+        const rows = Array.from(
+            table.querySelectorAll("tbody .cs-holding-row")
+        );
+
+        // Define a function to calculate and display the total monthly contribution.
+        function updateHoldingsMonthlyTotal() {
+
+            // Initialize the total in paisa to reduce floating-point addition errors.
+            // This approach is suitable for ordinary monetary values with two decimal places.
+            let totalPaisa = 0;
+
+            // Loop through each holding row in the table.
+            rows.forEach(function (row) {
+
+                // Skip rows hidden by the existing holdings search filter.
+                if (row.getClientRects().length === 0) {
+                    return;
+                }
+
+                // Read the monthly contribution from the row's data attribute.
+                // Expected HTML format: data-monthly-contribution="1500.50"
+                const amount = row.dataset.monthlyContribution;
+
+                // Validate the amount as a non-negative number with up to two decimal places.
+                // Skip the row if the value is missing or invalid.
+                if (!/^\d+(\.\d{1,2})?$/.test(amount || "")) {
+                    return;
+                }
+
+                // Split the amount into taka and paisa using the decimal point.
+                // If there is no decimal point, use an empty string for paisa.
+                const [taka, paisa = ""] = amount.split(".");
+
+                // Convert taka into paisa and add the remaining paisa.
+                // padEnd(2, "0") ensures that the paisa portion contains two digits.
+                totalPaisa +=
+                    Number(taka) * 100 +
+                    Number(paisa.padEnd(2, "0"));
+            });
+
+            // Convert the total from paisa to taka.
+            // Format the result with comma separators and exactly two decimal places.
+            totalCell.textContent =
+                (totalPaisa / 100).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+        }
+
+        // Create an observer to detect changes to the holding rows.
+        // This helps recalculate the total when the filter changes row visibility.
+        const observer = new MutationObserver(function () {
+
+            // Recalculate the total whenever an observed row changes.
+            updateHoldingsMonthlyTotal();
+        });
+
+        // Monitor each holding row for changes to its style, class, or hidden attribute.
+        rows.forEach(function (row) {
+            observer.observe(row, {
+                attributes: true,
+                attributeFilter: ["style", "class", "hidden"]
+            });
+        });
+
+        // Find the search input associated with the employee holdings table.
+        const filterInput = document.querySelector(
+            '[data-cs-search="holdingsTable"]'
+        );
+
+        // Add an input event listener if the search field exists.
+        if (filterInput) {
+
+            // Recalculate the total after the search filter processes the input.
+            filterInput.addEventListener("input", function () {
+
+                // Schedule the calculation after the current input event finishes.
+                setTimeout(updateHoldingsMonthlyTotal, 0);
+            });
+        }
+
+        // Calculate and display the initial total when the page loads.
+        updateHoldingsMonthlyTotal();
+    });
+</script>
+
+    <!-- ==================== TITLE: Readable "Selected Date" Previews For Effective Dates ==================== -->
+    <script>
+    // Wait until the HTML document has been fully loaded.
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // Convert YYYY-MM-DD into "Selected Date: DD MMM, YYYY"
+        function formatReadableDate(value) {
+
+            // Show the default text when no date is selected.
+            if (!value) {
+                return "Select an effective date";
+            }
+
+            // Split "YYYY-MM-DD" into numbers.
+            const parts = value.split("-").map(Number);
+
+            const year = parts[0];
+            const month = parts[1];
+            const day = parts[2];
+
+            // Month is zero-based in JavaScript dates, so subtract 1.
+            const date = new Date(year, month - 1, day);
+
+            // Format as "02 Nov 2026", then add a comma before the year.
+            return "Selected Date: " +
+                date.toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric"
+                }).replace(/ (\d{4})$/, ", $1");
+        }
+
+        // Connect one date input to its preview text element.
+        function setupDatePreview(inputId, previewId) {
+
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+
+            // Skip if either element is not on the page.
+            if (!input || !preview) {
+                return;
+            }
+
+            // Update the preview text from the input value.
+            function updatePreview() {
+                preview.textContent = formatReadableDate(input.value);
+            }
+
+            // Update whenever the user changes the date.
+            input.addEventListener("input", updatePreview);
+            input.addEventListener("change", updatePreview);
+
+            // Show the initial preview text.
+            updatePreview();
+        }
+
+        // 1. Share Allocation
+        setupDatePreview("allocateDate", "allocateDatePreview");
+
+        // 2. Quantity Adjustment
+        setupDatePreview("adjustDate", "adjustDatePreview");
+
+        // 3. Monthly Rate Change
+        setupDatePreview("rateDate", "rateDatePreview");
+
+    });
+</script>
+
+    <!-- ==================== TITLE: Expected Monthly Contribution Preview (Shares x Rate) ==================== -->
+    <script>
+    // Wait until the HTML document has been fully loaded.
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // Number of shares input.
+        const quantityInput = document.getElementById("allocateQuantity");
+
+        // Monthly rate per share input.
+        const monthlyRateInput = document.getElementById("allocateRate");
+
+        // Read-only output field for the expected monthly contribution.
+        const monthlyContributionInput = document.getElementById("allocateMonthlyContribution");
+
+        // Stop execution if any required field is missing.
+        if (!quantityInput ||
+            !monthlyRateInput ||
+            !monthlyContributionInput) {
+            return;
+        }
+
+        // Calculate and show: number of shares x monthly rate.
+        function updateMonthlyContribution() {
+
+            const quantity = Number(quantityInput.value);
+            const rate = Number(monthlyRateInput.value);
+
+            // Clear the result when either value is empty or invalid.
+            if (
+                quantityInput.value === "" ||
+                monthlyRateInput.value === "" ||
+                !Number.isSafeInteger(quantity) ||
+                quantity <= 0 ||
+                !Number.isFinite(rate) ||
+                rate <= 0
+            ) {
+                monthlyContributionInput.value = "";
+                return;
+            }
+
+            // Show the result with comma separators and two decimal places.
+            monthlyContributionInput.value =
+                (quantity * rate).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+        }
+
+        // Recalculate whenever the quantity or the rate changes.
+        quantityInput.addEventListener("input", updateMonthlyContribution);
+        monthlyRateInput.addEventListener("input", updateMonthlyContribution);
+
+        // Calculate once when the page loads.
+        updateMonthlyContribution();
+    });
+</script>
+
+    <!-- ==================== TITLE: Duplicate Share Category Warning ==================== -->
+    <script>
+    // Wait until the HTML document has been fully loaded.
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // Share category dropdown (NEW / OLD).
+        const categorySelect = document.getElementById("allocateCategory");
+
+        // Warning box shown when the category already exists.
+        const warning = document.getElementById("duplicateShareWarning");
+
+        // Hidden container that lists the employee's existing categories.
+        const existingContainer = document.getElementById("existingShareCategories");
+
+        // Stop execution if any required element is missing.
+        if (!categorySelect || !warning || !existingContainer) {
+            return;
+        }
+
+        // Collect the existing categories from the data-category attributes.
+        const existingCategories = Array.from(
+            existingContainer.querySelectorAll("[data-category]")
+        ).map(element => element.dataset.category);
+
+        // Show the warning only if the selected category already exists.
+        function checkDuplicateCategory() {
+
+            const selectedCategory = categorySelect.value;
+
+            const duplicate = existingCategories.includes(selectedCategory);
+
+            warning.hidden = !duplicate;
+        }
+
+        // Re-check whenever the category changes.
+        categorySelect.addEventListener("change", checkDuplicateCategory);
+
+        // Check once when the page loads.
+        checkDuplicateCategory();
+
+    });
+</script>
+
+    <!-- Dedicated Contribution Workspace (live table search, confirm dialogs, form guards) -->
+    <script th:src="@{/js/contribution-workspace.js}"></script>
+</body>
+</html>

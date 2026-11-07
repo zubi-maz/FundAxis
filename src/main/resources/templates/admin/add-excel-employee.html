@@ -1,0 +1,383 @@
+<!--<!DOCTYPE html>-->
+<!--&lt;!&ndash;-->
+<!--    FundAxis Admin Add Employees Form (multi-row & Excel import preview).-->
+<!--    GET  /admin/employees/new         -> Renders form-->
+<!--    POST /admin/employees/import/excel -> Parses Excel/CSV and pre-fills rows-->
+<!--    POST /admin/employees/bulk        -> Saves all employee records-->
+<!--&ndash;&gt;-->
+<!--<html lang="en"-->
+<!--      xmlns:th="http://www.thymeleaf.org"-->
+<!--      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1">-->
+<!--    <meta name="robots" content="noindex, nofollow">-->
+<!--    <title>Add Employees | FundAxis</title>-->
+
+<!--    &lt;!&ndash; Bootstrap 5 + Bootstrap Icons (CDN) &ndash;&gt;-->
+<!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">-->
+<!--    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">-->
+
+<!--    &lt;!&ndash; Shared FundAxis dashboard styles + admin-employees styles &ndash;&gt;-->
+<!--    <link th:href="@{/css/dashboard.css}" rel="stylesheet">-->
+<!--    <link th:href="@{/css/admin-employees.css}" rel="stylesheet">-->
+<!--</head>-->
+<!--<body class="fa-body">-->
+
+<!--<a class="fa-skip-link" href="#main-content">Skip to main content</a>-->
+
+<!--<div class="fa-shell">-->
+
+<!--    &lt;!&ndash; Admin sidebar navigation &ndash;&gt;-->
+<!--    <aside class="fa-sidebar" id="faSidebar" aria-label="Admin navigation">-->
+<!--        <div class="fa-sidebar-brand">-->
+<!--            <a th:href="@{/admin/dashboard}" class="fa-brand-link" aria-label="FundAxis Admin dashboard home">-->
+<!--                <img th:src="@{/images/favicon.ico}" alt="FundAxis" class="fa-brand-logo">-->
+<!--                <span class="fa-brand-text">FundAxis</span>-->
+<!--            </a>-->
+<!--            <button type="button" class="fa-sidebar-close" id="faSidebarClose" aria-label="Close navigation menu">-->
+<!--                <i class="bi bi-x-lg" aria-hidden="true"></i>-->
+<!--            </button>-->
+<!--        </div>-->
+
+<!--        <nav class="fa-sidebar-nav">-->
+<!--            &lt;!&ndash; Dashboard &ndash;&gt;-->
+<!--            <p class="fa-nav-heading">Dashboard</p>-->
+<!--            <ul class="fa-nav-list">-->
+<!--                <li><a th:href="@{/admin/dashboard}" class="fa-nav-link"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span></a></li>-->
+<!--            </ul>-->
+
+<!--            &lt;!&ndash; Employee and Fund Management &ndash;&gt;-->
+<!--            <p class="fa-nav-heading">Employee &amp; Fund</p>-->
+<!--            <ul class="fa-nav-list">-->
+<!--                <li><a th:href="@{/admin/employees}" class="fa-nav-link active" aria-current="page"><i class="bi bi-people" aria-hidden="true"></i><span>Employee Management</span></a></li>-->
+<!--                <li><a th:href="@{/admin/contribution-workspace}" class="fa-nav-link"><i class="bi bi-piggy-bank" aria-hidden="true"></i><span>Contributions</span></a></li>
+                    <li><a th:href="@{/admin/share-withdrawal-profit}" class="fa-nav-link"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> <span>Share Withdrawal &amp; Profit</span></a></li>-->
+<!--            </ul>-->
+
+<!--            &lt;!&ndash; Loan Management &ndash;&gt;-->
+<!--            <p class="fa-nav-heading">Loan Management</p>-->
+<!--            <ul class="fa-nav-list">-->
+<!--                <li><a th:href="@{/admin/loans}" class="fa-nav-link"><i class="bi bi-cash-coin" aria-hidden="true"></i><span>Loans</span></a></li>-->
+<!--                <li><a th:href="@{/admin/loan-extensions}" class="fa-nav-link"><i class="bi bi-calendar-plus" aria-hidden="true"></i><span>Loan Extensions</span></a></li>-->
+<!--                <li><a th:href="@{/admin/disbursements}" class="fa-nav-link"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i><span>Loan Disbursements</span></a></li>-->
+<!--            </ul>-->
+
+<!--            &lt;!&ndash; Repayment Management &ndash;&gt;-->
+<!--            <p class="fa-nav-heading">Repayment Management</p>-->
+<!--            <ul class="fa-nav-list">-->
+<!--                <li><a th:href="@{/admin/repayment-schedules}" class="fa-nav-link"><i class="bi bi-calendar-check" aria-hidden="true"></i><span>Repayment Schedules</span></a></li>-->
+<!--                <li><a th:href="@{/admin/repayments}" class="fa-nav-link"><i class="bi bi-receipt" aria-hidden="true"></i><span>Repayments</span></a></li>-->
+<!--            </ul>-->
+
+<!--            &lt;!&ndash; Security and Access &ndash;&gt;-->
+<!--            <p class="fa-nav-heading">Security &amp; Access</p>-->
+<!--            <ul class="fa-nav-list">-->
+<!--                <li><a th:href="@{/admin/user-accounts}" class="fa-nav-link"><i class="bi bi-person-gear" aria-hidden="true"></i><span>User Accounts</span></a></li>-->
+<!--                <li><a th:href="@{/admin/roles}" class="fa-nav-link"><i class="bi bi-shield-lock" aria-hidden="true"></i><span>Role Management</span></a></li>-->
+<!--            </ul>-->
+
+<!--            &lt;!&ndash; Account and Security &ndash;&gt;-->
+<!--            <p class="fa-nav-heading">Account &amp; Security</p>-->
+<!--            <ul class="fa-nav-list">-->
+<!--                <li>-->
+<!--                    <a th:href="@{/change-password}" class="fa-nav-link">-->
+<!--                        <i class="bi bi-key-fill" aria-hidden="true"></i><span>Change Password</span>-->
+<!--                    </a>-->
+<!--                </li>-->
+<!--                <li>-->
+<!--                    <form th:action="@{/logout}" method="post" class="fa-logout-form">-->
+<!--                        <button type="submit" class="fa-nav-link fa-nav-button">-->
+<!--                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Sign Out</span>-->
+<!--                        </button>-->
+<!--                    </form>-->
+<!--                </li>-->
+<!--            </ul>-->
+<!--        </nav>-->
+<!--    </aside>-->
+
+<!--    <div class="fa-overlay" id="faOverlay" hidden></div>-->
+
+<!--    <div class="fa-main-wrap">-->
+
+<!--        &lt;!&ndash; Topbar &ndash;&gt;-->
+<!--        <header class="fa-topbar">-->
+<!--            <div class="fa-topbar-left">-->
+<!--                <button type="button" class="fa-menu-toggle" id="faMenuToggle"-->
+<!--                        aria-label="Open navigation menu" aria-controls="faSidebar" aria-expanded="false">-->
+<!--                    <i class="bi bi-list" aria-hidden="true"></i>-->
+<!--                </button>-->
+<!--                <span class="fa-topbar-title">FundAxis <span class="fa-topbar-sub d-none d-md-inline">Employee Fund Management</span></span>-->
+<!--            </div>-->
+
+<!--            <div class="fa-topbar-right">-->
+<!--                <button type="button" class="fa-icon-btn" aria-label="Notifications">-->
+<!--                    <i class="bi bi-bell" aria-hidden="true"></i>-->
+<!--                </button>-->
+
+<!--                <div class="dropdown">-->
+<!--                    <button class="fa-profile-btn dropdown-toggle" type="button" id="faProfileMenu"-->
+<!--                            data-bs-toggle="dropdown" aria-expanded="false">-->
+<!--                        <span class="fa-avatar" aria-hidden="true"><i class="bi bi-person-fill"></i></span>-->
+<!--                        <span class="fa-profile-meta d-none d-sm-flex">-->
+<!--                            <span class="fa-profile-name" sec:authentication="name">username</span>-->
+<!--                            <span class="fa-role-badge fa-role-admin">ADMIN</span>-->
+<!--                        </span>-->
+<!--                    </button>-->
+<!--                    <ul class="dropdown-menu dropdown-menu-end fa-dropdown" aria-labelledby="faProfileMenu">-->
+<!--                        <li class="fa-dropdown-header">-->
+<!--                            <span class="fa-profile-name" sec:authentication="name">username</span>-->
+<!--                            <span class="fa-role-badge fa-role-admin">ADMIN</span>-->
+<!--                        </li>-->
+<!--                        <li><hr class="dropdown-divider"></li>-->
+<!--                        <li><a class="dropdown-item" th:href="@{/profile}"><i class="bi bi-person-badge" aria-hidden="true"></i> My Profile</a></li>-->
+<!--                        <li><a class="dropdown-item" th:href="@{/change-password}"><i class="bi bi-key" aria-hidden="true"></i> Change Password</a></li>-->
+<!--                        <li><hr class="dropdown-divider"></li>-->
+<!--                        <li>-->
+<!--                            <form th:action="@{/logout}" method="post">-->
+<!--                                <button type="submit" class="dropdown-item fa-dropdown-danger">-->
+<!--                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign Out-->
+<!--                                </button>-->
+<!--                            </form>-->
+<!--                        </li>-->
+<!--                    </ul>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </header>-->
+
+<!--        <main class="fa-content" id="main-content" tabindex="-1">-->
+
+<!--            &lt;!&ndash; Page Header &ndash;&gt;-->
+<!--            <div class="fa-page-header">-->
+<!--                <div>-->
+<!--                    <h1 class="fa-page-title">Add Employees</h1>-->
+<!--                    <p class="fa-page-subtitle">Register employees via bulk Excel upload preview or manual entry.</p>-->
+<!--                    <nav aria-label="Breadcrumb">-->
+<!--                        <ol class="breadcrumb fa-breadcrumb">-->
+<!--                            <li class="breadcrumb-item"><a th:href="@{/admin/dashboard}">Dashboard</a></li>-->
+<!--                            <li class="breadcrumb-item"><a th:href="@{/admin/employees}">Employee Management</a></li>-->
+<!--                            <li class="breadcrumb-item active" aria-current="page">Add Employees</li>-->
+<!--                        </ol>-->
+<!--                    </nav>-->
+<!--                </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; Global Alerts &ndash;&gt;-->
+<!--            <div class="fa-alerts" aria-live="polite">-->
+<!--                <div class="alert alert-danger alert-dismissible fade show fa-alert" role="alert" th:if="${errorMessage != null}">-->
+<!--                    <i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i>-->
+<!--                    <span th:text="${errorMessage}">Error message.</span>-->
+<!--                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>-->
+<!--                </div>-->
+<!--                <div class="alert alert-success alert-dismissible fade show fa-alert" role="alert" th:if="${successMessage != null}">-->
+<!--                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>-->
+<!--                    <span th:text="${successMessage}">Success message.</span>-->
+<!--                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>-->
+<!--                </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; =====================================================-->
+<!--                 BULK FILE UPLOAD SECTION (Uploads & Pre-fills Table)-->
+<!--                 ===================================================== &ndash;&gt;-->
+<!--            <div class="row justify-content-center mb-4">-->
+<!--                <div class="col-12 col-xxl-11">-->
+<!--                    <section class="fa-card p-3 p-md-4 bg-light border-0 shadow-sm" aria-label="Bulk employee file import">-->
+<!--                        <div class="d-flex align-items-center justify-content-between mb-2">-->
+<!--                            <h2 class="h6 fw-bold text-dark mb-0">-->
+<!--                                <i class="bi bi-file-earmark-spreadsheet-fill text-success me-2" aria-hidden="true"></i>Step 1: Upload Excel / CSV File (Auto-Extracts Names &amp; Designations)-->
+<!--                            </h2>-->
+<!--                            <span class="badge text-bg-success-subtle text-success border border-success-subtle px-2 py-1 small">-->
+<!--                                <i class="bi bi-rocket-takeoff me-1"></i> Smart Parser-->
+<!--                            </span>-->
+<!--                        </div>-->
+<!--                        <p class="text-muted small mb-3">Upload your disbursement or HR spreadsheet. The system automatically reads the left-most name column ("Applicant Name", "Name", etc.), extracts the designation in brackets like <code>(EO)</code>, and populates the form below for your review.</p>-->
+
+<!--                        <form th:action="@{/admin/employees/import/excel}" method="POST" enctype="multipart/form-data" class="row g-2 align-items-center">-->
+<!--                            <div class="col-12 col-md-9">-->
+<!--                                <input type="file" name="file" id="bulkImportFile" class="form-control form-control-sm fa-input bg-white" accept=".xlsx, .xls, .csv" required />-->
+<!--                            </div>-->
+<!--                            <div class="col-12 col-md-3">-->
+<!--                                <button type="submit" class="fa-btn fa-btn-primary w-100 fw-bold btn-sm py-2" style="background-color: #024731; border-color: #024731;">-->
+<!--                                    <i class="bi bi-upload me-1" aria-hidden="true"></i> Preview &amp; Fill Form-->
+<!--                                </button>-->
+<!--                            </div>-->
+<!--                        </form>-->
+<!--                    </section>-->
+<!--                </div>-->
+<!--            </div>-->
+
+<!--            &lt;!&ndash; =====================================================-->
+<!--                 MANUAL / PRE-FILLED REVIEW & SAVE FORM-->
+<!--                 ===================================================== &ndash;&gt;-->
+<!--            <div class="row justify-content-center">-->
+<!--                <div class="col-12 col-xxl-11">-->
+<!--                    <form method="post" id="employeeForm" novalidate-->
+<!--                          th:action="@{/admin/employees/bulk}">-->
+
+<!--                        <section class="fa-card" aria-labelledby="employeeFormTitle">-->
+<!--                            <div class="fa-card-header d-flex flex-wrap align-items-center justify-content-between gap-2">-->
+<!--                                <h2 class="fa-card-title mb-0" id="employeeFormTitle">Step 2: Review &amp; Save Employees</h2>-->
+<!--                                <span class="badge text-bg-secondary" id="rowCount" aria-live="polite">1 row</span>-->
+<!--                            </div>-->
+
+<!--                            <div class="p-3 p-md-4">-->
+<!--                                <p class="text-secondary small mb-3">-->
+<!--                                    Review the parsed records below, make any necessary adjustments, and click <strong>Save Employee</strong> to store them[cite: 7]. Rows left completely blank are ignored.-->
+<!--                                </p>-->
+
+<!--                                &lt;!&ndash; Column headings &ndash;&gt;-->
+<!--                                <div class="row g-2 d-none d-md-flex text-uppercase text-secondary small fw-semibold px-3 pb-2" aria-hidden="true">-->
+<!--                                    <div class="col-md-1">SL</div>-->
+<!--                                    <div class="col-md-2">Employee ID <span class="text-danger">*</span></div>-->
+<!--                                    <div class="col-md-3">Full Name <span class="text-danger">*</span></div>-->
+<!--                                    <div class="col-md-3">Designation <span class="text-danger">*</span></div>-->
+<!--                                    <div class="col-md-2">Fund Join Date <span class="text-danger">*</span></div>-->
+<!--                                    <div class="col-md-1"></div>-->
+<!--                                </div>-->
+
+<!--                                &lt;!&ndash; Rows Container &ndash;&gt;-->
+<!--                                <div id="employeeRows">-->
+<!--                                    <th:block th:each="emp, stat : ${employeeWrapper != null ? employeeWrapper.employees : null}">-->
+<!--                                        <th:block th:replace="~{:: employeeRow(${stat.index}, ${emp})}"></th:block>-->
+<!--                                    </th:block>-->
+<!--                                </div>-->
+
+<!--                                <div class="mt-3">-->
+<!--                                    <button type="button" id="addRowButton" class="fa-btn fa-btn-outline">-->
+<!--                                        <i class="bi bi-plus-circle" aria-hidden="true"></i> Add Another Employee-->
+<!--                                    </button>-->
+<!--                                    <span class="text-secondary small ms-2">Up to 50 employees per submission.</span>-->
+<!--                                </div>-->
+<!--                            </div>-->
+
+<!--                            &lt;!&ndash; Form actions &ndash;&gt;-->
+<!--                            <div class="fa-table-footer justify-content-end">-->
+<!--                                <a th:href="@{/admin/employees}" class="fa-btn fa-btn-outline flex-fill flex-sm-grow-0">Cancel</a>-->
+<!--                                <button type="submit" id="saveEmployeesButton" class="fa-btn fa-btn-primary flex-fill flex-sm-grow-0" style="background-color: #024731; border-color: #024731;">-->
+<!--                                    <i class="bi bi-check2-circle" aria-hidden="true"></i>-->
+<!--                                    <span id="saveEmployeesButtonText">Save Employee</span>-->
+<!--                                </button>-->
+<!--                            </div>-->
+<!--                        </section>-->
+<!--                    </form>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </main>-->
+
+<!--        <footer class="fa-footer">-->
+<!--            <span>FundAxis &mdash; Employee Fund Management System</span>-->
+<!--            <span>Authorized Internal Use Only</span>-->
+<!--        </footer>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; Template for dynamically adding blank rows &ndash;&gt;-->
+<!--<template id="employeeRowTemplate" th:inline="none">-->
+<!--    <div class="fa-employee-row border rounded-3 bg-body p-3 mb-2" data-row-index="__INDEX__">-->
+<!--        <div class="row g-2 align-items-start">-->
+<!--            <div class="col-12 col-md-1 d-flex align-items-center">-->
+<!--                <span class="badge rounded-pill text-bg-light border fa-row-number" aria-hidden="true">1</span>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-2">-->
+<!--                <label for="employeeId___INDEX__" class="fa-label d-md-none">Employee ID *</label>-->
+<!--                <input type="text" class="form-control fa-input" data-field="employeeId"-->
+<!--                       id="employeeId___INDEX__" name="employees[__INDEX__].employeeId"-->
+<!--                       placeholder="e.g. EMP003" maxlength="50" required autocomplete="off" spellcheck="false">-->
+<!--                <div class="invalid-feedback">Employee ID is required.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-3">-->
+<!--                <label for="fullName___INDEX__" class="fa-label d-md-none">Full Name *</label>-->
+<!--                <input type="text" class="form-control fa-input" data-field="fullName"-->
+<!--                       id="fullName___INDEX__" name="employees[__INDEX__].fullName"-->
+<!--                       placeholder="Full name" maxlength="150" required autocomplete="off">-->
+<!--                <div class="invalid-feedback">Full name is required.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-3">-->
+<!--                <label for="designation___INDEX__" class="fa-label d-md-none">Designation *</label>-->
+<!--                <select class="form-select fa-input" data-field="designation"-->
+<!--                        id="designation___INDEX__" name="employees[__INDEX__].employeeDesignation" required>-->
+<!--                    <option value="">Select designation</option>-->
+<!--                    <option value="FEO">FEO</option>-->
+<!--                    <option value="AVP">AVP</option>-->
+<!--                    <option value="EO">EO</option>-->
+<!--                    <option value="JO">JO</option>-->
+<!--                    <option value="SAVP">SAVP</option>-->
+<!--                    <option value="SPO">SPO</option>-->
+<!--                    <option value="PO">PO</option>-->
+<!--                </select>-->
+<!--                <div class="invalid-feedback">Select a designation.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-2">-->
+<!--                <label for="fundJoinDate___INDEX__" class="fa-label d-md-none">Fund Join Date *</label>-->
+<!--                <input type="date" class="form-control fa-input" data-field="fundJoinDate"-->
+<!--                       id="fundJoinDate___INDEX__" name="employees[__INDEX__].fundJoinDate" required>-->
+<!--                <div class="invalid-feedback">Select the fund join date.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-1 text-md-end">-->
+<!--                <button type="button" class="btn btn-outline-danger fa-row-remove" aria-label="Remove row">-->
+<!--                    <i class="bi bi-trash3" aria-hidden="true"></i>-->
+<!--                    <span class="d-md-none ms-1">Remove</span>-->
+<!--                </button>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</template>-->
+
+<!--&lt;!&ndash; Row Fragment for Server-Rendered Pre-filled Data &ndash;&gt;-->
+<!--<div th:remove="all">-->
+<!--    <div th:fragment="employeeRow(idx, emp)" class="fa-employee-row border rounded-3 bg-body p-3 mb-2">-->
+<!--        <div class="row g-2 align-items-start">-->
+<!--            <div class="col-12 col-md-1 d-flex align-items-center">-->
+<!--                <span class="badge rounded-pill text-bg-light border fa-row-number" aria-hidden="true">1</span>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-2">-->
+<!--                <label th:for="|employeeId_${idx}|" class="fa-label d-md-none">Employee ID *</label>-->
+<!--                <input type="text" class="form-control fa-input" data-field="employeeId"-->
+<!--                       th:id="|employeeId_${idx}|" th:name="|employees[${idx}].employeeId|"-->
+<!--                       th:value="${emp != null ? emp.employeeId : ''}"-->
+<!--                       placeholder="e.g. EMP003" maxlength="50" required autocomplete="off">-->
+<!--                <div class="invalid-feedback">Employee ID is required.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-3">-->
+<!--                <label th:for="|fullName_${idx}|" class="fa-label d-md-none">Full Name *</label>-->
+<!--                <input type="text" class="form-control fa-input" data-field="fullName"-->
+<!--                       th:id="|fullName_${idx}|" th:name="|employees[${idx}].fullName|"-->
+<!--                       th:value="${emp != null ? emp.fullName : ''}"-->
+<!--                       placeholder="Full name" maxlength="150" required autocomplete="off">-->
+<!--                <div class="invalid-feedback">Full name is required.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-3">-->
+<!--                <label th:for="|designation_${idx}|" class="fa-label d-md-none">Designation *</label>-->
+<!--                <select class="form-select fa-input" data-field="designation"-->
+<!--                        th:id="|designation_${idx}|" th:name="|employees[${idx}].employeeDesignation|" required>-->
+<!--                    <option value="">Select designation</option>-->
+<!--                    <option th:each="d : ${designations}"-->
+<!--                            th:value="${d}"-->
+<!--                            th:selected="${emp != null and emp.employeeDesignation == d}"-->
+<!--                            th:text="${d.name()}">Designation</option>-->
+<!--                </select>-->
+<!--                <div class="invalid-feedback">Select a designation.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-2">-->
+<!--                <label th:for="|fundJoinDate_${idx}|" class="fa-label d-md-none">Fund Join Date *</label>-->
+<!--                <input type="date" class="form-control fa-input" data-field="fundJoinDate"-->
+<!--                       th:id="|fundJoinDate_${idx}|" th:name="|employees[${idx}].fundJoinDate|"-->
+<!--                       th:value="${emp != null and emp.fundJoinDate != null ? #temporals.format(emp.fundJoinDate, 'yyyy-MM-dd') : ''}"-->
+<!--                       required>-->
+<!--                <div class="invalid-feedback">Select the fund join date.</div>-->
+<!--            </div>-->
+<!--            <div class="col-12 col-md-1 text-md-end">-->
+<!--                <button type="button" class="btn btn-outline-danger fa-row-remove" aria-label="Remove row">-->
+<!--                    <i class="bi bi-trash3" aria-hidden="true"></i>-->
+<!--                    <span class="d-md-none ms-1">Remove</span>-->
+<!--                </button>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>-->
+<!--<script th:src="@{/js/dashboard.js}"></script>-->
+<!--<script th:src="@{/js/admin-employee-form.js}"></script>-->
+<!--</body>-->
+<!--</html>-->

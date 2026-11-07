@@ -3,6 +3,7 @@ package com.fundaxis.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -45,21 +46,9 @@ public class Employee {
     @Column(nullable = false, length = 100)
     private String fullName;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email must be valid")
-    @Column(nullable = false, length = 100)
-    private String email;
 
-    @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone number must be valid")
-    @Column(length = 20)
-    private String phoneNumber;
-
-    ///-----------------------------------------------------------
-    @NotBlank(message = "Designation name is required")
-    @Column(nullable = false, length = 100)
-    private String designation;
-
-    public enum Designation {
+    ///---------- Designation Field & Enum ----------
+    public enum EmployeeDesignation {
         FEO,
         AVP,
         EO,
@@ -68,12 +57,15 @@ public class Employee {
         SPO,
         PO
     }
+
+    @NotNull(message = "Designation is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private EmployeeDesignation employeeDesignation;
     ///-----------------------------------------------------------
 
 
-
-
-    ///-----------------------------------------------------------
+    //////---------- EmployeeStatus Field & Enum ----------
     public enum EmployeeStatus{
         ACTIVE,
         INACTIVE,
@@ -87,7 +79,7 @@ public class Employee {
     ///-----------------------------------------------------------
 
 
-    // ---------- Fund Membership Information ----------
+    ///---------- Fund Membership Information ----------
 
     // Date the employee officially joined the fund
     @Column(name = "fund_join_date")

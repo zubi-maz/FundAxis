@@ -90,10 +90,14 @@ public class AdminRepaymentScheduleController { // Repayment schedule admin cont
 
     // Displays the form for creating a new repayment schedule.
     @GetMapping("/admin/repayment-schedules/new") // GET /admin/repayment-schedules/new
-    public String showAddRepaymentScheduleForm(Model model) { // Open the empty form
+    public String showAddRepaymentScheduleForm(
+            @RequestParam(required = false) String loanApplicationId,
+            @RequestParam(defaultValue = "false") boolean returnToLoanDetails,
+            Model model) { // Open the empty form
 
         model.addAttribute("schedule", new RepaymentSchedule()); // Empty object for form binding
-        model.addAttribute("loanApplicationId", ""); // Loan Application ID is typed separately
+        model.addAttribute("loanApplicationId", loanApplicationId == null ? "" : loanApplicationId); // Preserve context from Loan Details
+        model.addAttribute("returnToLoanDetails", returnToLoanDetails);
         model.addAttribute("editMode", false); // Create mode
 
         return "admin/repayment-schedule-form"; // Render the shared form
@@ -108,6 +112,7 @@ public class AdminRepaymentScheduleController { // Repayment schedule admin cont
     @PostMapping("/admin/repayment-schedules") // POST /admin/repayment-schedules
     public String createRepaymentSchedule(
             @RequestParam String loanApplicationId, // Business ID typed by the admin
+            @RequestParam(defaultValue = "false") boolean returnToLoanDetails,
             @Valid @ModelAttribute("schedule") RepaymentSchedule schedule, // Bound and validated form object
             BindingResult bindingResult, // Validation errors
             Model model, // Data for the view
@@ -117,12 +122,14 @@ public class AdminRepaymentScheduleController { // Repayment schedule admin cont
         if (loanApplicationId == null || loanApplicationId.trim().isEmpty()) { // Loan ID is required
             model.addAttribute("errorMessage", "Loan Application ID is required."); // Show the problem
             model.addAttribute("loanApplicationId", loanApplicationId); // Keep what was typed
+            model.addAttribute("returnToLoanDetails", returnToLoanDetails);
             model.addAttribute("editMode", false); // Stay in create mode
             return "admin/repayment-schedule-form"; // Back to the form
         }
 
         if (bindingResult.hasErrors()) { // Field validation failed
             model.addAttribute("loanApplicationId", loanApplicationId); // Keep what was typed
+            model.addAttribute("returnToLoanDetails", returnToLoanDetails);
             model.addAttribute("editMode", false); // Stay in create mode
             return "admin/repayment-schedule-form"; // Back to the form
         }
@@ -133,12 +140,16 @@ public class AdminRepaymentScheduleController { // Repayment schedule admin cont
             repaymentScheduleService.createRepaymentSchedule(existingLoan.getId(), schedule); // Service needs the internal loan ID
 
             redirectAttributes.addFlashAttribute("successMessage", "Repayment schedule created successfully."); // Success message
+            if (returnToLoanDetails) {
+                return "redirect:/admin/loans/" + existingLoan.getLoanApplicationId();
+            }
             return "redirect:/admin/repayment-schedules"; // Go to the list
 
         } catch (RuntimeException exception) { // Loan not found, duplicate installment and similar
 
             model.addAttribute("errorMessage", exception.getMessage()); // Show the business error
             model.addAttribute("loanApplicationId", loanApplicationId); // Keep what was typed
+            model.addAttribute("returnToLoanDetails", returnToLoanDetails);
             model.addAttribute("editMode", false); // Stay in create mode
             return "admin/repayment-schedule-form"; // Back to the form
         }

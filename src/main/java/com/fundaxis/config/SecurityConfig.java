@@ -3,6 +3,7 @@ package com.fundaxis.config;
 import com.fundaxis.security.CustomAuthenticationSuccessHandler;
 import com.fundaxis.security.CustomUserDetailsService;
 import com.fundaxis.security.MustChangePasswordFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -15,6 +16,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
@@ -120,6 +122,21 @@ public class SecurityConfig {
         http
                 // Register our database authentication provider
                 .authenticationProvider(authenticationProvider())
+
+                // Keep browser CSRF protection enabled and give failed token
+                // checks a useful recovery message without exposing internals.
+                .csrf(csrf -> csrf.withObjectPostProcessor(
+                        new org.springframework.security.config.ObjectPostProcessor<CsrfFilter>() {
+                            @Override
+                            public CsrfFilter postProcess(CsrfFilter filter) {
+                                filter.setAccessDeniedHandler((request, response, denied) -> {
+                                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                    response.setContentType("text/plain;charset=UTF-8");
+                                    response.getWriter().write("Your security token expired or could not be verified. Reload the page and try again. No changes were saved.");
+                                });
+                                return filter;
+                            }
+                        }))
 
                 // Define which requests are public and which require authentication
                 .authorizeHttpRequests(auth -> auth
